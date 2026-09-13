@@ -22,7 +22,7 @@ An elegant e-commerce website for an Algerian women's fashion boutique, featurin
 - **Media Library** — Upload and organize images (requires Supabase Storage)
 
 ### Technical Highlights
-- **Zero-cost stack** — GitHub Pages (frontend) + Supabase free tier (backend)
+- **Zero-cost stack** — Vercel (frontend) + Supabase free tier (backend)
 - **Demo Mode** — Works immediately with embedded sample data before Supabase is configured
 - **No build step** — Pure HTML, CSS, and vanilla JavaScript
 - **Product Variants** — Size × color combinations with independent stock tracking
@@ -34,11 +34,13 @@ An elegant e-commerce website for an Algerian women's fashion boutique, featurin
 ### 1. View the Demo
 Simply open `index.html` in a browser. The site works in demo mode with sample data.
 
-### 2. Deploy to GitHub Pages
+### 2. Deploy to Vercel
 1. Push this repository to GitHub
-2. Go to **Settings → Pages**
-3. Set source to the `main` branch
-4. Your site will be live at `https://yourusername.github.io/akram-storewebsite/`
+2. Go to [vercel.com](https://vercel.com) and import the repository
+3. Vercel auto-detects the static site — no build configuration needed
+4. Your site will be live at `https://your-project.vercel.app`
+
+> The included `vercel.json` enables clean URLs (no `.html` extensions) and optimized caching for static assets.
 
 ### 3. Connect Supabase (for production)
 
