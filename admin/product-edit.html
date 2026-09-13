@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Modifier Produit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-body">
+            <form class="admin-form" id="product-form" onsubmit="saveProduct(event)">
+              <!-- Bilingual names -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nom (Français) *</label>
+                  <input type="text" id="name_fr" required>
+                </div>
+                <div class="form-group">
+                  <label>الاسم (عربي) *</label>
+                  <input type="text" id="name_ar" required dir="rtl">
+                </div>
+              </div>
+
+              <!-- Slug -->
+              <div class="form-group">
+                <label>Slug (URL) *</label>
+                <input type="text" id="slug" required pattern="[a-z0-9-]+" placeholder="caftan-royal-bleu">
+              </div>
+
+              <!-- Category -->
+              <div class="form-group">
+                <label>Catégorie</label>
+                <select id="category_id">
+                  <option value="">— Aucune —</option>
+                </select>
+              </div>
+
+              <!-- Descriptions -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Description (Français)</label>
+                  <textarea id="description_fr" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>الوصف (عربي)</label>
+                  <textarea id="description_ar" rows="4" dir="rtl"></textarea>
+                </div>
+              </div>
+
+              <!-- Pricing -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Prix (DA) *</label>
+                  <input type="number" id="base_price" required min="0" step="100">
+                </div>
+                <div class="form-group">
+                  <label>Prix Promo (DA)</label>
+                  <input type="number" id="sale_price" min="0" step="100" placeholder="Laisser vide si pas de promo">
+                </div>
+              </div>
+
+              <!-- Stock -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Stock *</label>
+                  <input type="number" id="stock_quantity" required min="0" value="0">
+                </div>
+                <div class="form-group">
+                  <label>Seuil Stock Faible</label>
+                  <input type="number" id="low_stock_threshold" min="0" value="5">
+                </div>
+              </div>
+
+              <!-- Status -->
+              <div class="form-group">
+                <label>Statut</label>
+                <select id="status">
+                  <option value="active">Actif</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="archived">Archivé</option>
+                </select>
+              </div>
+
+              <!-- Flags -->
+              <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="is_featured">
+                  <span class="toggle-track"></span>
+                  Produit Vedette
+                </label>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="is_new_arrival">
+                  <span class="toggle-track"></span>
+                  Nouveauté
+                </label>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="is_best_seller">
+                  <span class="toggle-track"></span>
+                  Best Seller
+                </label>
+              </div>
+
+              <!-- Image URLs (simplified for GitHub Pages — no file upload) -->
+              <div class="form-group">
+                <label>Images (URLs, une par ligne)</label>
+                <textarea id="image_urls" rows="4" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"></textarea>
+                <small style="color:var(--color-text-muted);">
+                  Pour l'upload d'images, utilisez Supabase Storage ou un service d'hébergement d'images.
+                  La première URL sera l'image principale.
+                </small>
+              </div>
+
+              <!-- Variants -->
+              <div class="form-group">
+                <label>Variantes (Tailles & Couleurs)</label>
+                <div id="variants-container"></div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="addVariantRow()" style="margin-top: 8px;">
+                  + Ajouter une variante
+                </button>
+              </div>
+
+              <div class="admin-form-actions">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <a href="products.html" class="btn btn-outline">Annuler</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    let editingProduct = null;
+    let variantCount = 0;
+
+    async function loadPage() {
+      if (!await checkAdminAuth()) return;
+
+      renderAdminSidebar('products');
+
+      // Load categories for dropdown
+      const categories = await store.getCategories();
+      const catSelect = document.getElementById('category_id');
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = `${i18n.field(cat, 'name')}`;
+        catSelect.appendChild(opt);
+      });
+
+      // Check if editing existing product
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+
+      if (id) {
+        renderAdminTopbar(i18n.currentLang === 'ar' ? 'تعديل المنتج' : 'Modifier le Produit');
+        await loadExistingProduct(id);
+      } else {
+        renderAdminTopbar(i18n.currentLang === 'ar' ? 'إضافة منتج جديد' : 'Ajouter un Produit');
+        addVariantRow(); // Start with one empty variant
+      }
+
+      // Auto-generate slug from French name
+      document.getElementById('name_fr').addEventListener('input', function() {
+        if (!editingProduct) {
+          document.getElementById('slug').value = this.value
+            .toLowerCase()
+            .replace(/[éèê]/g, 'e')
+            .replace(/[àâ]/g, 'a')
+            .replace(/[ùû]/g, 'u')
+            .replace(/[ïî]/g, 'i')
+            .replace(/[ôö]/g, 'o')
+            .replace(/ç/g, 'c')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+        }
+      });
+    }
+
+    async function loadExistingProduct(id) {
+      // In demo mode, find from demo data
+      const products = await store.getProducts({});
+      editingProduct = products.find(p => p.id === id);
+      if (!editingProduct) return;
+
+      const p = editingProduct;
+      document.getElementById('name_fr').value = p.name_fr;
+      document.getElementById('name_ar').value = p.name_ar;
+      document.getElementById('slug').value = p.slug;
+      document.getElementById('category_id').value = p.category_id || '';
+      document.getElementById('description_fr').value = p.description_fr || '';
+      document.getElementById('description_ar').value = p.description_ar || '';
+      document.getElementById('base_price').value = p.base_price;
+      document.getElementById('sale_price').value = p.sale_price || '';
+      document.getElementById('stock_quantity').value = p.stock_quantity;
+      document.getElementById('low_stock_threshold').value = p.low_stock_threshold || 5;
+      document.getElementById('status').value = p.status;
+      document.getElementById('is_featured').checked = p.is_featured;
+      document.getElementById('is_new_arrival').checked = p.is_new_arrival;
+      document.getElementById('is_best_seller').checked = p.is_best_seller;
+
+      // Images
+      if (p.images) {
+        document.getElementById('image_urls').value = p.images.map(i => i.image_url).join('\n');
+      }
+
+      // Variants
+      if (p.variants && p.variants.length > 0) {
+        p.variants.forEach(v => addVariantRow(v));
+      } else {
+        addVariantRow();
+      }
+    }
+
+    function addVariantRow(data = null) {
+      variantCount++;
+      const container = document.getElementById('variants-container');
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 80px 40px;gap:8px;align-items:end;margin-bottom:8px;';
+      row.innerHTML = `
+        <div class="form-group">
+          ${variantCount === 1 ? '<label>Taille</label>' : ''}
+          <input type="text" value="${data?.size || ''}" placeholder="S, M, L, XL..." class="variant-size">
+        </div>
+        <div class="form-group">
+          ${variantCount === 1 ? '<label>Couleur (FR)</label>' : ''}
+          <input type="text" value="${data?.color_name_fr || ''}" placeholder="Bleu, Rouge..." class="variant-color-fr">
+        </div>
+        <div class="form-group">
+          ${variantCount === 1 ? '<label>Hex</label>' : ''}
+          <input type="color" value="${data?.color_hex || '#000000'}" class="variant-color-hex" style="height:38px;">
+        </div>
+        <div class="form-group">
+          ${variantCount === 1 ? '<label>Stock</label>' : ''}
+          <input type="number" value="${data?.stock_quantity || 0}" min="0" class="variant-stock">
+        </div>
+        <button type="button" onclick="this.parentElement.remove()" style="height:38px;color:var(--color-danger);font-size:1.25rem;cursor:pointer;${variantCount === 1 ? 'margin-top:22px;' : ''}">&times;</button>
+      `;
+      container.appendChild(row);
+    }
+
+    async function saveProduct(e) {
+      e.preventDefault();
+
+      const productData = {
+        name_fr: document.getElementById('name_fr').value,
+        name_ar: document.getElementById('name_ar').value,
+        slug: document.getElementById('slug').value,
+        category_id: document.getElementById('category_id').value || null,
+        description_fr: document.getElementById('description_fr').value,
+        description_ar: document.getElementById('description_ar').value,
+        base_price: parseFloat(document.getElementById('base_price').value),
+        sale_price: document.getElementById('sale_price').value ? parseFloat(document.getElementById('sale_price').value) : null,
+        stock_quantity: parseInt(document.getElementById('stock_quantity').value),
+        low_stock_threshold: parseInt(document.getElementById('low_stock_threshold').value),
+        status: document.getElementById('status').value,
+        is_featured: document.getElementById('is_featured').checked,
+        is_new_arrival: document.getElementById('is_new_arrival').checked,
+        is_best_seller: document.getElementById('is_best_seller').checked,
+      };
+
+      try {
+        if (editingProduct) {
+          await store.updateProduct(editingProduct.id, productData);
+        } else {
+          await store.createProduct(productData);
+        }
+
+        alert(i18n.currentLang === 'ar' ? 'تم الحفظ بنجاح' : 'Enregistré avec succès');
+        window.location.href = 'products.html';
+      } catch (e) {
+        console.error('Failed to save product:', e);
+        alert('Error: ' + (e.message || 'Failed to save'));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPage);
+  </script>
+</body>
+</html>

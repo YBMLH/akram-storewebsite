@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Commandes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <!-- Status filter tabs -->
+        <div class="category-filters" id="order-filters" style="margin-bottom: 16px;"></div>
+
+        <div class="admin-card">
+          <div class="table-overflow">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>${'Client'}</th>
+                  <th>${'Téléphone'}</th>
+                  <th>${'Wilaya'}</th>
+                  <th>${'Total'}</th>
+                  <th>${'Statut'}</th>
+                  <th>${'Date'}</th>
+                  <th>${'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div id="order-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center; padding:24px;">
+    <div style="background:white; border-radius:12px; max-width:600px; width:100%; max-height:90vh; overflow-y:auto; padding:24px;" id="order-modal-content"></div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    let currentStatusFilter = null;
+
+    async function loadOrders() {
+      if (!await checkAdminAuth()) return;
+
+      renderAdminSidebar('orders');
+      renderAdminTopbar(i18n.t('admin.orders'));
+      renderFilters();
+      await fetchOrders();
+    }
+
+    function renderFilters() {
+      const statuses = ['new', 'contacted', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'];
+      document.getElementById('order-filters').innerHTML = `
+        <button class="filter-chip ${!currentStatusFilter ? 'active' : ''}" onclick="filterOrders(null)">${i18n.t('general.all')}</button>
+        ${statuses.map(s => {
+          const label = ORDER_STATUSES[s];
+          return `<button class="filter-chip ${currentStatusFilter === s ? 'active' : ''}" onclick="filterOrders('${s}')">${i18n.currentLang === 'ar' ? label.ar : label.fr}</button>`;
+        }).join('')}
+      `;
+    }
+
+    async function fetchOrders() {
+      try {
+        const filters = {};
+        if (currentStatusFilter) filters.status = currentStatusFilter;
+        const orders = await store.getOrders(filters);
+
+        const tbody = document.getElementById('orders-table');
+        if (orders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#999;">Aucune commande</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = orders.map(order => `
+          <tr>
+            <td><strong>#${order.order_number}</strong></td>
+            <td>${order.customer_name}</td>
+            <td><a href="tel:${order.customer_phone}">${order.customer_phone}</a></td>
+            <td>${order.wilaya}</td>
+            <td><strong>${i18n.formatPrice(order.total_amount)}</strong></td>
+            <td>
+              <select class="status-select" onchange="updateStatus('${order.id}', this.value)" style="padding:4px 8px;border:1px solid var(--admin-border);border-radius:4px;font-size:0.8125rem;">
+                ${Object.entries(ORDER_STATUSES).map(([key, val]) => `
+                  <option value="${key}" ${order.status === key ? 'selected' : ''}>${i18n.currentLang === 'ar' ? val.ar : val.fr}</option>
+                `).join('')}
+              </select>
+            </td>
+            <td style="font-size:0.8125rem;white-space:nowrap;">${i18n.formatDate(order.created_at)}</td>
+            <td>
+              <div class="table-actions">
+                <button class="table-action" onclick="viewOrder('${order.id}')" title="Voir">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="table-action" onclick="sendWhatsApp('${order.customer_phone}', '${order.customer_name}')" title="WhatsApp">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load orders:', e);
+      }
+    }
+
+    function filterOrders(status) {
+      currentStatusFilter = status;
+      renderFilters();
+      fetchOrders();
+    }
+
+    async function updateStatus(orderId, status) {
+      try {
+        await store.updateOrderStatus(orderId, status);
+      } catch (e) {
+        console.error('Failed to update order status:', e);
+        alert('Error updating order status');
+        fetchOrders();
+      }
+    }
+
+    function viewOrder(orderId) {
+      // Find order from demo data or fetch
+      const order = DEMO_DATA.orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const modal = document.getElementById('order-modal');
+      const content = document.getElementById('order-modal-content');
+
+      content.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2>Commande #${order.order_number}</h2>
+          <button onclick="closeOrderModal()" style="font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <div style="display:grid;gap:12px;">
+          <div><strong>Client:</strong> ${order.customer_name}</div>
+          <div><strong>Téléphone:</strong> ${order.customer_phone}</div>
+          <div><strong>Wilaya:</strong> ${order.wilaya}</div>
+          ${order.commune ? `<div><strong>Commune:</strong> ${order.commune}</div>` : ''}
+          <div><strong>Adresse:</strong> ${order.address}</div>
+          <div><strong>Total:</strong> ${i18n.formatPrice(order.total_amount)}</div>
+          <div><strong>Statut:</strong> ${getStatusLabel(order.status)}</div>
+          <div><strong>Date:</strong> ${i18n.formatDate(order.created_at)}</div>
+          ${order.notes ? `<div><strong>Notes:</strong> ${order.notes}</div>` : ''}
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeOrderModal() {
+      document.getElementById('order-modal').style.display = 'none';
+    }
+
+    function sendWhatsApp(phone, name) {
+      // Convert local phone to international (Algeria)
+      let intPhone = phone.replace(/^0/, '213');
+      const message = i18n.currentLang === 'ar'
+        ? `مرحباً ${name}، بخصوص طلبك من متجر أكرم...`
+        : `Bonjour ${name}, concernant votre commande chez Akram Store...`;
+      window.open(`https://wa.me/${intPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+    document.addEventListener('click', e => {
+      if (e.target.id === 'order-modal') closeOrderModal();
+    });
+  </script>
+</body>
+</html>

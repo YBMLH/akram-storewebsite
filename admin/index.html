@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content" id="admin-content">
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid"></div>
+
+        <!-- Recent Orders & Low Stock -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h2>${'Commandes Récentes'}</h2>
+              <a href="orders.html" class="btn btn-sm btn-outline">Voir tout</a>
+            </div>
+            <div class="table-overflow">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Client</th>
+                    <th>Total</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-orders"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h2>${'Produits Populaires'}</h2>
+              <a href="products.html" class="btn btn-sm btn-outline">Voir tout</a>
+            </div>
+            <div class="table-overflow">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Produit</th>
+                    <th>Prix</th>
+                    <th>Stock</th>
+                    <th>Vues</th>
+                  </tr>
+                </thead>
+                <tbody id="popular-products"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    async function loadDashboard() {
+      if (!await checkAdminAuth()) return;
+
+      renderAdminSidebar('dashboard');
+      renderAdminTopbar(i18n.t('admin.dashboard'));
+
+      // Load stats
+      try {
+        const stats = await store.getDashboardStats();
+        document.getElementById('stats-grid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-icon orders">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <div class="stat-info">
+              <h3>${i18n.currentLang === 'ar' ? 'طلبات اليوم' : 'Commandes Aujourd\'hui'}</h3>
+              <div class="stat-value">${stats.todayOrders}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon sales">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="stat-info">
+              <h3>${i18n.currentLang === 'ar' ? 'مبيعات الشهر' : 'Ventes du Mois'}</h3>
+              <div class="stat-value">${i18n.formatPrice(stats.monthlySales)}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon products">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div class="stat-info">
+              <h3>${i18n.currentLang === 'ar' ? 'المنتجات' : 'Produits'}</h3>
+              <div class="stat-value">${stats.totalProducts}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon alerts">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="stat-info">
+              <h3>${i18n.currentLang === 'ar' ? 'مخزون منخفض' : 'Stock Faible'}</h3>
+              <div class="stat-value">${stats.lowStockCount}</div>
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        console.error('Failed to load stats:', e);
+      }
+
+      // Load recent orders
+      try {
+        const orders = await store.getOrders({ limit: 5 });
+        document.getElementById('recent-orders').innerHTML = orders.slice(0, 5).map(order => `
+          <tr>
+            <td>#${order.order_number}</td>
+            <td>${order.customer_name}</td>
+            <td>${i18n.formatPrice(order.total_amount)}</td>
+            <td>${getStatusLabel(order.status)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="4" style="text-align:center;color:#999;">Aucune commande</td></tr>';
+      } catch (e) {
+        console.error('Failed to load recent orders:', e);
+      }
+
+      // Load popular products
+      try {
+        const products = await store.getProducts({ sort: 'popular', limit: 5 });
+        document.getElementById('popular-products').innerHTML = products.map(p => {
+          const stockClass = p.stock_quantity <= 0 ? 'color:var(--color-danger)' :
+                           p.stock_quantity <= 5 ? 'color:var(--color-warning)' : '';
+          return `
+            <tr>
+              <td>${i18n.field(p, 'name')}</td>
+              <td>${i18n.formatPrice(p.sale_price || p.base_price)}</td>
+              <td style="${stockClass}">${p.stock_quantity}</td>
+              <td>${p.views_count}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load popular products:', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>

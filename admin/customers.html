@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Clients</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2>Liste des Clients</h2>
+          </div>
+          <div class="table-overflow">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Téléphone</th>
+                  <th>Wilaya</th>
+                  <th>Commandes</th>
+                  <th>Total Dépensé</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    async function loadCustomers() {
+      if (!await checkAdminAuth()) return;
+
+      renderAdminSidebar('customers');
+      renderAdminTopbar(i18n.t('admin.customers'));
+
+      try {
+        const customers = await store.getCustomers();
+        const tbody = document.getElementById('customers-table');
+
+        if (customers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#999;">Aucun client</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = customers.map(c => `
+          <tr>
+            <td><strong>${c.name}</strong></td>
+            <td><a href="tel:${c.phone}">${c.phone}</a></td>
+            <td>${c.wilaya || '—'}</td>
+            <td>${c.total_orders}</td>
+            <td>${i18n.formatPrice(c.total_spent)}</td>
+            <td>
+              <div class="table-actions">
+                <button class="table-action" onclick="contactCustomer('${c.phone}', '${c.name}')" title="WhatsApp">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load customers:', e);
+      }
+    }
+
+    function contactCustomer(phone, name) {
+      let intPhone = phone.replace(/^0/, '213');
+      const msg = `Bonjour ${name}, merci pour votre fidélité chez Akram Store !`;
+      window.open(`https://wa.me/${intPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCustomers);
+  </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-login">
+    <div class="login-card">
+      <h1>Akram Store</h1>
+      <p data-i18n="admin.login">Connexion Admin</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label data-i18n="admin.email">Email</label>
+          <input type="email" id="login-email" required placeholder="admin@example.com">
+        </div>
+        <div class="form-group">
+          <label data-i18n="admin.password">Mot de passe</label>
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top: 16px;">
+          <span data-i18n="admin.login">Connexion</span>
+        </button>
+      </form>
+
+      <div class="login-demo-notice" id="demo-notice" style="display:none;">
+        ⚠️ <strong>Mode Démo</strong> — Entrez n'importe quel email/mot de passe pour accéder au tableau de bord de démonstration.
+        Pour la production, configurez vos identifiants Supabase dans <code>js/config.js</code>.
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script>
+    // Check if already logged in
+    async function checkAuth() {
+      const session = await store.getSession();
+      if (session) {
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Show demo notice
+    if (STORE_CONFIG.demoMode) {
+      document.getElementById('demo-notice').style.display = 'block';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+
+      try {
+        if (STORE_CONFIG.demoMode) {
+          sessionStorage.setItem('akram_admin_demo', 'true');
+          window.location.href = 'index.html';
+          return;
+        }
+
+        await store.signIn(email, password);
+        window.location.href = 'index.html';
+      } catch (error) {
+        errorEl.textContent = error.message || 'Login failed';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>

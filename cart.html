@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Panier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main class="cart-page">
+    <div class="container">
+      <h1 class="section-title" style="margin-bottom: 24px;" data-i18n="cart.title">Panier</h1>
+      <div id="cart-content"></div>
+    </div>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/wilayas.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    function renderCart() {
+      const container = document.getElementById('cart-content');
+
+      if (cart.items.length === 0) {
+        container.innerHTML = `
+          <div class="cart-empty">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <p data-i18n="cart.empty">${i18n.t('cart.empty')}</p>
+            <a href="index.html" class="btn btn-primary" data-i18n="cart.continue">${i18n.t('cart.continue')}</a>
+          </div>
+        `;
+        i18n.translatePage();
+        return;
+      }
+
+      const wilayaOptions = WILAYAS.map(w => `<option value="${w.name}">${w.code} - ${w.name}</option>`).join('');
+
+      container.innerHTML = `
+        <div class="cart-grid">
+          <div class="cart-items">
+            ${cart.items.map((item, index) => `
+              <div class="cart-item">
+                <div class="cart-item-image">
+                  <a href="product.html?slug=${item.product_slug}">
+                    <img src="${item.image_url || 'https://placehold.co/100x120/e2e8f0/666?text=...'}" alt="${i18n.currentLang === 'ar' ? item.product_name_ar : item.product_name_fr}">
+                  </a>
+                </div>
+                <div class="cart-item-details">
+                  <a href="product.html?slug=${item.product_slug}" class="cart-item-name">${i18n.currentLang === 'ar' ? item.product_name_ar : item.product_name_fr}</a>
+                  <div class="cart-item-meta">
+                    ${item.color ? `${i18n.t('product.color')}: ${i18n.currentLang === 'ar' ? (item.color_ar || item.color) : item.color}` : ''}
+                    ${item.size ? ` · ${i18n.t('product.size')}: ${item.size}` : ''}
+                  </div>
+                  <div class="cart-item-bottom">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div class="quantity-selector" style="transform: scale(0.85); transform-origin: start;">
+                        <button class="quantity-btn" onclick="updateCartItem(${index}, ${item.quantity - 1})">−</button>
+                        <input type="number" class="quantity-value" value="${item.quantity}" min="1" max="99" onchange="updateCartItem(${index}, parseInt(this.value) || 1)">
+                        <button class="quantity-btn" onclick="updateCartItem(${index}, ${item.quantity + 1})">+</button>
+                      </div>
+                      <span class="cart-item-price">${i18n.formatPrice(item.unit_price * item.quantity)}</span>
+                    </div>
+                    <button class="cart-item-remove" onclick="removeCartItem(${index})" data-i18n="cart.remove">${i18n.t('cart.remove')}</button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="cart-summary">
+            <h3 data-i18n="checkout.title">${i18n.t('checkout.title')}</h3>
+
+            <div class="summary-row">
+              <span data-i18n="cart.subtotal">${i18n.t('cart.subtotal')}</span>
+              <span id="summary-subtotal">${i18n.formatPrice(cart.subtotal)}</span>
+            </div>
+            <div class="summary-row">
+              <span data-i18n="cart.shipping">${i18n.t('cart.shipping')}</span>
+              <span data-i18n="cart.free_shipping">${i18n.t('cart.free_shipping')}</span>
+            </div>
+            <div class="summary-row summary-total">
+              <span data-i18n="cart.total">${i18n.t('cart.total')}</span>
+              <span id="summary-total">${i18n.formatPrice(cart.subtotal)}</span>
+            </div>
+
+            <form class="checkout-form" id="checkout-form" onsubmit="placeOrder(event)">
+              <div class="form-group">
+                <label data-i18n="checkout.name">${i18n.t('checkout.name')}</label>
+                <input type="text" id="customer-name" required>
+              </div>
+
+              <div class="form-group">
+                <label data-i18n="checkout.phone">${i18n.t('checkout.phone')}</label>
+                <input type="tel" id="customer-phone" required placeholder="0550123456" pattern="^0[567][0-9]{8}$">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label data-i18n="checkout.wilaya">${i18n.t('checkout.wilaya')}</label>
+                  <select id="customer-wilaya" required>
+                    <option value="">--</option>
+                    ${wilayaOptions}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label data-i18n="checkout.commune">${i18n.t('checkout.commune')}</label>
+                  <input type="text" id="customer-commune">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label data-i18n="checkout.address">${i18n.t('checkout.address')}</label>
+                <input type="text" id="customer-address" required>
+              </div>
+
+              <div class="form-group">
+                <label data-i18n="checkout.notes">${i18n.t('checkout.notes')}</label>
+                <textarea id="customer-notes" rows="2" data-i18n="checkout.notes_placeholder" placeholder="${i18n.t('checkout.notes_placeholder')}"></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-whatsapp btn-lg btn-block">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span data-i18n="cart.place_order">${i18n.t('cart.place_order')}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+
+      i18n.translatePage();
+    }
+
+    function updateCartItem(index, qty) {
+      cart.updateQuantity(index, qty);
+      renderCart();
+    }
+
+    function removeCartItem(index) {
+      cart.remove(index);
+      renderCart();
+    }
+
+    async function placeOrder(e) {
+      e.preventDefault();
+
+      const orderInfo = {
+        name: document.getElementById('customer-name').value.trim(),
+        phone: document.getElementById('customer-phone').value.trim(),
+        wilaya: document.getElementById('customer-wilaya').value,
+        commune: document.getElementById('customer-commune').value.trim(),
+        address: document.getElementById('customer-address').value.trim(),
+        notes: document.getElementById('customer-notes').value.trim(),
+      };
+
+      // Validate phone
+      if (!/^0[567]\d{8}$/.test(orderInfo.phone)) {
+        alert(i18n.currentLang === 'ar'
+          ? 'رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 أو 06 أو 07 ويتكون من 10 أرقام.'
+          : 'Numéro de téléphone invalide. Il doit commencer par 05, 06, ou 07 et contenir 10 chiffres.');
+        return;
+      }
+
+      // Save order to database
+      try {
+        const orderData = {
+          customer_name: orderInfo.name,
+          customer_phone: orderInfo.phone,
+          wilaya: orderInfo.wilaya,
+          commune: orderInfo.commune,
+          address: orderInfo.address,
+          notes: orderInfo.notes,
+          subtotal: cart.subtotal,
+          shipping_cost: 0,
+          total_amount: cart.subtotal,
+          items: cart.items.map(item => ({
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            product_name_ar: item.product_name_ar,
+            product_name_fr: item.product_name_fr,
+            size: item.size,
+            color: item.color,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            image_url: item.image_url,
+          })),
+        };
+
+        await store.createOrder(orderData);
+      } catch (e) {
+        console.error('Failed to save order to database:', e);
+        // Continue with WhatsApp even if DB save fails
+      }
+
+      // Send WhatsApp message
+      whatsapp.sendOrder(orderInfo, cart.items, cart.subtotal, 0);
+
+      // Clear cart
+      cart.clear();
+      renderCart();
+    }
+
+    function renderPage() {
+      renderHeader('');
+      renderFooter();
+      renderWhatsAppFAB();
+      renderCart();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPage);
+    document.addEventListener('cartUpdated', () => {
+      // Update summary numbers without full re-render during quantity changes
+    });
+  </script>
+</body>
+</html>

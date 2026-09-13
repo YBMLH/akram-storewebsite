@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Homepage Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <!-- Hero Slides -->
+        <div class="admin-card" style="margin-bottom: 16px;">
+          <div class="admin-card-header">
+            <h2>🎠 Slides du Hero</h2>
+            <button class="btn btn-primary btn-sm" onclick="addSlide()">+ Ajouter un Slide</button>
+          </div>
+          <div class="admin-card-body" id="hero-slides-admin"></div>
+        </div>
+
+        <!-- Preview -->
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2>👁️ Aperçu</h2>
+          </div>
+          <div class="admin-card-body">
+            <p style="color: var(--color-text-muted); margin-bottom: 16px;">
+              Les changements sur cette page nécessitent une connexion Supabase active pour être enregistrés.
+              En mode démo, les modifications ne seront pas persistées.
+            </p>
+            <a href="../index.html" target="_blank" class="btn btn-outline btn-sm">Voir la page d'accueil →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    let slides = [];
+
+    async function loadPage() {
+      if (!await checkAdminAuth()) return;
+
+      renderAdminSidebar('homepage');
+      renderAdminTopbar(i18n.t('admin.homepage'));
+
+      // Load existing slides
+      slides = await store.getHomepageSections();
+      slides = slides.filter(s => s.section_type === 'hero_slide');
+      renderSlides();
+    }
+
+    function renderSlides() {
+      const container = document.getElementById('hero-slides-admin');
+
+      if (slides.length === 0) {
+        container.innerHTML = `
+          <div class="admin-empty">
+            <p>Aucun slide configuré. Ajoutez votre premier slide.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = slides.map((slide, index) => `
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;padding:16px;background:var(--admin-bg);border-radius:8px;margin-bottom:12px;">
+          <div>
+            <img src="${slide.image_url || 'https://placehold.co/200x100/ccc/666?text=No+Image'}" alt="" style="width:100%;border-radius:6px;aspect-ratio:2/1;object-fit:cover;">
+          </div>
+          <div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+              <div>
+                <small style="color:var(--color-text-muted);">Titre (FR)</small>
+                <div style="font-weight:600;">${slide.title_fr || '—'}</div>
+              </div>
+              <div>
+                <small style="color:var(--color-text-muted);">العنوان (عربي)</small>
+                <div style="font-weight:600;" dir="rtl">${slide.title_ar || '—'}</div>
+              </div>
+            </div>
+            <div style="font-size:0.8125rem;color:var(--color-text-secondary);">
+              ${slide.subtitle_fr || ''}
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;">
+              <span class="status-badge ${slide.is_active !== false ? 'status-active' : 'status-archived'}">${slide.is_active !== false ? 'Actif' : 'Inactif'}</span>
+              <span style="font-size:0.75rem;color:var(--color-text-muted);">Ordre: ${slide.sort_order}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addSlide() {
+      alert(STORE_CONFIG.demoMode
+        ? 'En mode démo, les slides sont en lecture seule. Configurez Supabase pour ajouter/modifier les slides.'
+        : 'Fonctionnalité disponible avec Supabase connecté.');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPage);
+  </script>
+</body>
+</html>

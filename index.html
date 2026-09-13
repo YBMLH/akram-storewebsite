@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Mode Féminine Algérienne</title>
+  <meta name="description" content="Boutique en ligne de mode féminine algérienne. Caftans, Karakou, Robes de soirée, Burkinis et plus.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <!-- Hero Slider -->
+    <section class="hero-slider" id="hero-slider">
+      <div class="hero-slides" id="hero-slides"></div>
+      <div class="hero-dots" id="hero-dots"></div>
+      <button class="hero-arrow hero-arrow-prev" onclick="slideHero(-1)" aria-label="Previous">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="hero-arrow hero-arrow-next" onclick="slideHero(1)" aria-label="Next">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </section>
+
+    <!-- Categories -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="home.categories">Parcourir par Catégorie</h2>
+        </div>
+        <div class="categories-grid" id="categories-grid"></div>
+      </div>
+    </section>
+
+    <!-- Featured Products -->
+    <section class="section" style="background: var(--color-bg-alt);">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="home.featured">Produits Vedettes</h2>
+          <a href="category.html?filter=featured" class="section-link" data-i18n="home.view_all">Voir Tout</a>
+        </div>
+        <div class="products-grid" id="featured-products"></div>
+      </div>
+    </section>
+
+    <!-- New Arrivals -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="home.new_arrivals">Nouveautés</h2>
+          <a href="category.html?filter=new" class="section-link" data-i18n="home.view_all">Voir Tout</a>
+        </div>
+        <div class="products-grid" id="new-products"></div>
+      </div>
+    </section>
+
+    <!-- Best Sellers -->
+    <section class="section" style="background: var(--color-bg-alt);">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="home.best_sellers">Meilleures Ventes</h2>
+          <a href="category.html?filter=best" class="section-link" data-i18n="home.view_all">Voir Tout</a>
+        </div>
+        <div class="products-grid" id="best-products"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    // Hero Slider state
+    let currentSlide = 0;
+    let slideInterval;
+    let heroSlides = [];
+
+    function slideHero(direction) {
+      currentSlide = (currentSlide + direction + heroSlides.length) % heroSlides.length;
+      updateSlider();
+      resetSlideTimer();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      updateSlider();
+      resetSlideTimer();
+    }
+
+    function updateSlider() {
+      const slidesEl = document.getElementById('hero-slides');
+      const dir = i18n.isRTL ? 1 : -1;
+      slidesEl.style.transform = `translateX(${dir * currentSlide * 100}%)`;
+
+      document.querySelectorAll('.hero-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+      });
+    }
+
+    function resetSlideTimer() {
+      clearInterval(slideInterval);
+      slideInterval = setInterval(() => slideHero(1), 5000);
+    }
+
+    async function renderHeroSlider() {
+      try {
+        heroSlides = await store.getHomepageSections();
+        heroSlides = heroSlides.filter(s => s.section_type === 'hero_slide');
+
+        const slidesEl = document.getElementById('hero-slides');
+        const dotsEl = document.getElementById('hero-dots');
+
+        slidesEl.innerHTML = heroSlides.map(slide => `
+          <div class="hero-slide">
+            <div class="hero-slide-bg" style="background-image: url('${slide.image_url}')"></div>
+            <div class="hero-slide-content container">
+              <h2>${i18n.field(slide, 'title')}</h2>
+              <p>${i18n.field(slide, 'subtitle')}</p>
+              ${slide.link_url ? `<a href="${slide.link_url}" class="btn btn-primary btn-lg">${i18n.field(slide, 'button_text') || i18n.t('home.shop_now')}</a>` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        dotsEl.innerHTML = heroSlides.map((_, i) => `
+          <button class="hero-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})" aria-label="Slide ${i + 1}"></button>
+        `).join('');
+
+        resetSlideTimer();
+      } catch (e) {
+        console.error('Failed to load hero slider:', e);
+      }
+    }
+
+    async function renderCategories() {
+      try {
+        const categories = await store.getCategories();
+        const grid = document.getElementById('categories-grid');
+        grid.innerHTML = categories.map(cat => `
+          <a href="category.html?slug=${cat.slug}" class="category-card">
+            <div class="category-card-bg" style="background-image: url('${cat.image_url || `https://placehold.co/400x400/8B1A2B/fff?text=${encodeURIComponent(i18n.field(cat, 'name'))}`}')"></div>
+            <span class="category-card-name">${i18n.field(cat, 'name')}</span>
+          </a>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load categories:', e);
+      }
+    }
+
+    async function renderProductSection(containerId, filters) {
+      try {
+        const products = await store.getProducts({ ...filters, limit: 4 });
+        renderProductGrid(containerId, products);
+      } catch (e) {
+        console.error('Failed to load products:', e);
+      }
+    }
+
+    async function renderPage() {
+      renderHeader('home');
+      renderFooter();
+      renderWhatsAppFAB();
+      await Promise.all([
+        renderHeroSlider(),
+        renderCategories(),
+        renderProductSection('featured-products', { is_featured: true }),
+        renderProductSection('new-products', { is_new_arrival: true }),
+        renderProductSection('best-products', { is_best_seller: true }),
+      ]);
+      i18n.translatePage();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPage);
+  </script>
+</body>
+</html>

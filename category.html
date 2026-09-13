@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Catégories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main class="category-page">
+    <div class="container">
+      <div class="breadcrumbs" id="breadcrumbs"></div>
+      <div class="category-header" id="category-header"></div>
+
+      <!-- Category filter chips (shown on all-products view) -->
+      <div class="category-filters" id="category-filters"></div>
+
+      <div class="category-toolbar">
+        <span class="category-count" id="product-count"></span>
+        <div class="category-sort">
+          <select id="sort-select" onchange="sortProducts(this.value)">
+            <option value="newest" data-i18n="category.sort_newest">Plus Récents</option>
+            <option value="price_asc" data-i18n="category.sort_price_low">Prix Croissant</option>
+            <option value="price_desc" data-i18n="category.sort_price_high">Prix Décroissant</option>
+            <option value="popular" data-i18n="category.sort_popular">Plus Populaires</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="products-grid" id="products-grid"></div>
+    </div>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    let currentCategory = null;
+    let currentFilter = null;
+    let currentSort = 'newest';
+    let allCategories = [];
+
+    async function loadPage() {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('slug');
+      currentFilter = params.get('filter');
+
+      // Load categories for filter chips
+      allCategories = await store.getCategories();
+
+      if (slug) {
+        currentCategory = await store.getCategoryBySlug(slug);
+      }
+
+      renderPageHeader();
+      renderFilters();
+      await loadProducts();
+    }
+
+    function renderPageHeader() {
+      const header = document.getElementById('category-header');
+      const bc = document.getElementById('breadcrumbs');
+
+      let title = i18n.t('category.all_products');
+      let description = '';
+
+      if (currentCategory) {
+        title = i18n.field(currentCategory, 'name');
+        description = i18n.field(currentCategory, 'description');
+        document.title = `${title} — Akram Store`;
+      } else if (currentFilter === 'new') {
+        title = i18n.t('home.new_arrivals');
+      } else if (currentFilter === 'sale') {
+        title = i18n.t('nav.sale');
+      } else if (currentFilter === 'best') {
+        title = i18n.t('home.best_sellers');
+      } else if (currentFilter === 'featured') {
+        title = i18n.t('home.featured');
+      }
+
+      header.innerHTML = `
+        <h1>${title}</h1>
+        ${description ? `<p>${description}</p>` : ''}
+      `;
+
+      bc.innerHTML = `
+        <a href="index.html">${i18n.t('nav.home')}</a>
+        <span class="sep">›</span>
+        <span>${title}</span>
+      `;
+    }
+
+    function renderFilters() {
+      const container = document.getElementById('category-filters');
+
+      // Show category chips only when not viewing a specific category
+      if (currentCategory) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = `
+        <button class="filter-chip ${!currentFilter && !currentCategory ? 'active' : ''}" onclick="filterBy(null)">${i18n.t('general.all')}</button>
+        ${allCategories.map(cat => `
+          <button class="filter-chip" onclick="filterByCategory('${cat.slug}')">${i18n.field(cat, 'name')}</button>
+        `).join('')}
+      `;
+    }
+
+    async function loadProducts() {
+      showLoading('products-grid');
+
+      const filters = { sort: currentSort };
+
+      if (currentCategory) {
+        filters.category_id = currentCategory.id;
+      } else if (currentFilter === 'new') {
+        filters.is_new_arrival = true;
+      } else if (currentFilter === 'sale') {
+        filters.has_sale = true;
+      } else if (currentFilter === 'best') {
+        filters.is_best_seller = true;
+      } else if (currentFilter === 'featured') {
+        filters.is_featured = true;
+      }
+
+      try {
+        const products = await store.getProducts(filters);
+        renderProductGrid('products-grid', products);
+
+        const countEl = document.getElementById('product-count');
+        countEl.textContent = `${products.length} ${i18n.t('cart.items')}`;
+
+        if (products.length === 0) {
+          document.getElementById('products-grid').innerHTML = `
+            <div class="cart-empty" style="grid-column: 1/-1">
+              <p>${i18n.t('general.no_results')}</p>
+              <a href="index.html" class="btn btn-primary">${i18n.t('cart.continue')}</a>
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.error('Failed to load products:', e);
+      }
+    }
+
+    function sortProducts(sort) {
+      currentSort = sort;
+      loadProducts();
+    }
+
+    function filterBy(filter) {
+      currentFilter = filter;
+      currentCategory = null;
+      window.history.replaceState({}, '', filter ? `category.html?filter=${filter}` : 'category.html');
+      renderPageHeader();
+      renderFilters();
+      loadProducts();
+    }
+
+    function filterByCategory(slug) {
+      window.location.href = `category.html?slug=${slug}`;
+    }
+
+    function renderPage() {
+      renderHeader('categories');
+      renderFooter();
+      renderWhatsAppFAB();
+      loadPage();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPage);
+  </script>
+</body>
+</html>

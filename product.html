@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akram Store — Produit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main class="product-detail">
+    <div class="container">
+      <div class="breadcrumbs" id="breadcrumbs"></div>
+      <div class="product-detail-grid" id="product-detail"></div>
+    </div>
+
+    <!-- Related Products -->
+    <section class="section" style="background: var(--color-bg-alt);">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="product.related">Produits Similaires</h2>
+        </div>
+        <div class="products-grid" id="related-products"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <!-- Zoom Modal -->
+  <div class="zoom-modal" id="zoom-modal" style="display:none" onclick="closeZoom()">
+    <img id="zoom-image" src="" alt="Zoom">
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    let currentProduct = null;
+    let selectedSize = null;
+    let selectedColor = null;
+    let quantity = 1;
+
+    async function loadProduct() {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('slug');
+      if (!slug) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      showLoading('product-detail');
+
+      try {
+        currentProduct = await store.getProductBySlug(slug);
+        if (!currentProduct) {
+          document.getElementById('product-detail').innerHTML = `
+            <div class="cart-empty" style="grid-column: 1/-1">
+              <p>${i18n.t('general.no_results')}</p>
+              <a href="index.html" class="btn btn-primary">${i18n.t('cart.continue')}</a>
+            </div>
+          `;
+          return;
+        }
+
+        document.title = `${i18n.field(currentProduct, 'name')} — Akram Store`;
+        store.incrementViews(currentProduct.id);
+        renderProductDetail();
+        renderBreadcrumbs();
+        await renderRelatedProducts();
+      } catch (e) {
+        console.error('Failed to load product:', e);
+      }
+    }
+
+    function renderBreadcrumbs() {
+      const bc = document.getElementById('breadcrumbs');
+      const cat = currentProduct.category || DEMO_DATA.categories.find(c => c.id === currentProduct.category_id);
+      bc.innerHTML = `
+        <a href="index.html">${i18n.t('nav.home')}</a>
+        <span class="sep">›</span>
+        ${cat ? `<a href="category.html?slug=${cat.slug}">${i18n.field(cat, 'name')}</a><span class="sep">›</span>` : ''}
+        <span>${i18n.field(currentProduct, 'name')}</span>
+      `;
+    }
+
+    function renderProductDetail() {
+      const p = currentProduct;
+      const images = p.images || [];
+      const variants = (p.variants || []).filter(v => v.is_active !== false);
+      const primaryImg = images.find(img => img.is_primary) || images[0];
+      const name = i18n.field(p, 'name');
+
+      // Get unique sizes and colors
+      const sizes = [...new Set(variants.map(v => v.size).filter(Boolean))];
+      const colors = [];
+      const seenColors = new Set();
+      variants.forEach(v => {
+        if (v.color_name_fr && !seenColors.has(v.color_name_fr)) {
+          seenColors.add(v.color_name_fr);
+          colors.push({ name_fr: v.color_name_fr, name_ar: v.color_name_ar, hex: v.color_hex });
+        }
+      });
+
+      const hasDiscount = p.sale_price && p.sale_price < p.base_price;
+      const discountPercent = hasDiscount ? Math.round((1 - p.sale_price / p.base_price) * 100) : 0;
+
+      // Stock status
+      let stockClass = 'in-stock';
+      let stockKey = 'product.in_stock';
+      if (p.stock_quantity <= 0) { stockClass = 'out-of-stock'; stockKey = 'product.out_of_stock'; }
+      else if (p.stock_quantity <= (p.low_stock_threshold || 5)) { stockClass = 'low-stock'; stockKey = 'product.low_stock'; }
+
+      const container = document.getElementById('product-detail');
+      container.innerHTML = `
+        <div class="product-gallery">
+          <div class="product-main-image" onclick="openZoom()">
+            <img id="main-product-image" src="${primaryImg?.image_url || `https://placehold.co/600x800/e2e8f0/666?text=${encodeURIComponent(name)}`}" alt="${name}">
+          </div>
+          ${images.length > 1 ? `
+          <div class="product-thumbnails">
+            ${images.map((img, i) => `
+              <div class="product-thumbnail ${img.is_primary ? 'active' : ''}" onclick="changeImage('${img.image_url}', this)">
+                <img src="${img.image_url}" alt="${name} ${i + 1}">
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="product-info">
+          <span class="product-info-category">${i18n.field(p.category || DEMO_DATA?.categories?.find(c => c.id === p.category_id) || {}, 'name')}</span>
+          <h1 class="product-info-name">${name}</h1>
+
+          <div class="product-info-price">
+            <span class="price-current">${i18n.formatPrice(p.sale_price || p.base_price)}</span>
+            ${hasDiscount ? `
+              <span class="price-original">${i18n.formatPrice(p.base_price)}</span>
+              <span class="discount-tag">-${discountPercent}%</span>
+            ` : ''}
+          </div>
+
+          <div class="stock-status ${stockClass}">
+            <span class="stock-dot"></span>
+            <span data-i18n="${stockKey}">${i18n.t(stockKey)}</span>
+            ${p.stock_quantity > 0 && p.stock_quantity <= 10 ? `<span>(${p.stock_quantity})</span>` : ''}
+          </div>
+
+          ${colors.length > 0 ? `
+          <div class="option-group">
+            <span class="option-label" data-i18n="product.color">${i18n.t('product.color')}</span>
+            <div class="option-buttons">
+              ${colors.map(c => `
+                <div class="color-swatch" style="background: ${c.hex}" title="${i18n.currentLang === 'ar' ? c.name_ar : c.name_fr}" onclick="selectColor('${c.name_fr}', '${c.name_ar}', '${c.hex}', this)"></div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          ${sizes.length > 0 ? `
+          <div class="option-group">
+            <span class="option-label" data-i18n="product.size">${i18n.t('product.size')}</span>
+            <div class="option-buttons" id="size-buttons">
+              ${sizes.map(s => {
+                const variantsForSize = variants.filter(v => v.size === s);
+                const totalStock = variantsForSize.reduce((sum, v) => sum + v.stock_quantity, 0);
+                return `<button class="size-btn ${totalStock <= 0 ? 'out-of-stock' : ''}" onclick="selectSize('${s}', this)" ${totalStock <= 0 ? 'disabled' : ''}>${s}</button>`;
+              }).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <div class="option-group">
+            <span class="option-label" data-i18n="product.quantity">${i18n.t('product.quantity')}</span>
+            <div class="quantity-selector">
+              <button class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+              <input type="number" class="quantity-value" id="quantity-input" value="1" min="1" max="99" onchange="setQuantity(this.value)">
+              <button class="quantity-btn" onclick="changeQuantity(1)">+</button>
+            </div>
+          </div>
+
+          <div class="product-actions">
+            <button class="btn btn-primary btn-lg" onclick="addToCart()" ${p.stock_quantity <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              <span data-i18n="product.add_to_cart">${i18n.t('product.add_to_cart')}</span>
+            </button>
+            <button class="btn btn-whatsapp btn-lg" onclick="buyNowWhatsApp()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <span data-i18n="product.buy_now">${i18n.t('product.buy_now')}</span>
+            </button>
+          </div>
+
+          <div class="product-description">
+            <h3 data-i18n="product.description">${i18n.t('product.description')}</h3>
+            <p>${i18n.field(p, 'description')}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function changeImage(url, thumbEl) {
+      document.getElementById('main-product-image').src = url;
+      document.querySelectorAll('.product-thumbnail').forEach(t => t.classList.remove('active'));
+      if (thumbEl) thumbEl.classList.add('active');
+    }
+
+    function selectSize(size, btn) {
+      selectedSize = size;
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    function selectColor(nameFr, nameAr, hex, el) {
+      selectedColor = { name_fr: nameFr, name_ar: nameAr, hex };
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function changeQuantity(delta) {
+      quantity = Math.max(1, Math.min(99, quantity + delta));
+      document.getElementById('quantity-input').value = quantity;
+    }
+
+    function setQuantity(val) {
+      quantity = Math.max(1, Math.min(99, parseInt(val) || 1));
+      document.getElementById('quantity-input').value = quantity;
+    }
+
+    function addToCart() {
+      if (!currentProduct || currentProduct.stock_quantity <= 0) return;
+      const variants = currentProduct.variants || [];
+      const sizes = [...new Set(variants.map(v => v.size).filter(Boolean))];
+      const colors = [...new Set(variants.map(v => v.color_name_fr).filter(Boolean))];
+
+      if (sizes.length > 0 && !selectedSize) {
+        alert(i18n.t('product.select_size'));
+        return;
+      }
+      if (colors.length > 0 && !selectedColor) {
+        alert(i18n.t('product.select_color'));
+        return;
+      }
+
+      const variant = variants.find(v =>
+        (!selectedSize || v.size === selectedSize) &&
+        (!selectedColor || v.color_name_fr === selectedColor.name_fr)
+      );
+
+      cart.add(currentProduct, variant ? { ...variant, color_name_ar: selectedColor?.name_ar } : null, quantity);
+    }
+
+    function buyNowWhatsApp() {
+      addToCart();
+      window.location.href = 'cart.html';
+    }
+
+    function openZoom() {
+      const img = document.getElementById('main-product-image');
+      document.getElementById('zoom-image').src = img.src;
+      document.getElementById('zoom-modal').style.display = 'flex';
+    }
+
+    function closeZoom() {
+      document.getElementById('zoom-modal').style.display = 'none';
+    }
+
+    async function renderRelatedProducts() {
+      if (!currentProduct) return;
+      try {
+        const products = await store.getProducts({
+          category_id: currentProduct.category_id,
+          limit: 4,
+        });
+        const related = products.filter(p => p.id !== currentProduct.id).slice(0, 4);
+        renderProductGrid('related-products', related);
+      } catch (e) {
+        console.error('Failed to load related products:', e);
+      }
+    }
+
+    function renderPage() {
+      renderHeader('');
+      renderFooter();
+      renderWhatsAppFAB();
+      loadProduct();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPage);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeZoom(); });
+  </script>
+</body>
+</html>
