@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Akram Store — Commandes</title>
+  <title>Collection By Ibtissam — Commandes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/admin.css">
 </head>
@@ -173,8 +173,8 @@
       // Convert local phone to international (Algeria)
       let intPhone = phone.replace(/^0/, '213');
       const message = i18n.currentLang === 'ar'
-        ? `مرحباً ${name}، بخصوص طلبك من متجر أكرم...`
-        : `Bonjour ${name}, concernant votre commande chez Akram Store...`;
+        ? `مرحباً ${name}، بخصوص طلبك من مجموعة إبتسام...`
+        : `Bonjour ${name}, concernant votre commande chez Collection By Ibtissam...`;
       window.open(`https://wa.me/${intPhone}?text=${encodeURIComponent(message)}`, '_blank');
     }
 

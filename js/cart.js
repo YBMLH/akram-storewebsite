@@ -1,5 +1,5 @@
 // ============================================================
-// Akram Store — Shopping Cart
+// Collection By Ibtissam — Shopping Cart
 // Persisted in localStorage
 // ============================================================
 

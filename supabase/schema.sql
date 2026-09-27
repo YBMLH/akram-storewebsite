@@ -1,5 +1,5 @@
 -- ============================================================
--- Akram Store — Supabase Database Schema
+-- Collection By Ibtissam — Supabase Database Schema
 -- Algerian Fashion Boutique E-Commerce
 -- ============================================================
 
@@ -189,7 +189,7 @@ CREATE TABLE site_settings (
 
 -- Default settings
 INSERT INTO site_settings (key, value) VALUES
-  ('store_name', '{"ar": "متجر أكرم", "fr": "Akram Store"}'),
+  ('store_name', '{"ar": "مجموعة إبتسام", "fr": "Collection By Ibtissam"}'),
   ('store_phone', '"0550000000"'),
   ('whatsapp_number', '"213550000000"'),
   ('store_address', '{"ar": "الجزائر", "fr": "Algérie"}'),

@@ -1,16 +1,16 @@
 // ============================================================
-// Akram Store — Demo Data
+// Collection By Ibtissam — Demo Data
 // Used when Supabase is not configured (demo mode)
 // ============================================================
 
 const DEMO_DATA = {
   categories: [
-    { id: 'cat-1', name_ar: 'قفطان', name_fr: 'Caftans', slug: 'caftans', image_url: 'https://placehold.co/400x400/8B1A2B/ffffff?text=Caftans', sort_order: 1 },
-    { id: 'cat-2', name_ar: 'كاراكو', name_fr: 'Karakou', slug: 'karakou', image_url: 'https://placehold.co/400x400/c9a96e/ffffff?text=Karakou', sort_order: 2 },
-    { id: 'cat-3', name_ar: 'فساتين سهرة', name_fr: 'Robes de Soirée', slug: 'soiree', image_url: 'https://placehold.co/400x400/1a1a2e/ffffff?text=Soir%C3%A9e', sort_order: 3 },
-    { id: 'cat-4', name_ar: 'بوركيني', name_fr: 'Burkinis', slug: 'burkinis', image_url: 'https://placehold.co/400x400/0d47a1/ffffff?text=Burkinis', sort_order: 4 },
-    { id: 'cat-5', name_ar: 'ملابس كاجوال', name_fr: 'Casual Wear', slug: 'casual', image_url: 'https://placehold.co/400x400/d4a5a5/ffffff?text=Casual', sort_order: 5 },
-    { id: 'cat-6', name_ar: 'إكسسوارات', name_fr: 'Accessoires', slug: 'accessories', image_url: 'https://placehold.co/400x400/b7791f/ffffff?text=Accessoires', sort_order: 6 },
+    { id: 'cat-1', name_ar: 'قفطان', name_fr: 'Caftans', slug: 'caftans', image_url: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&h=800&fit=crop', sort_order: 1 },
+    { id: 'cat-2', name_ar: 'كاراكو', name_fr: 'Karakou', slug: 'karakou', image_url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&h=800&fit=crop', sort_order: 2 },
+    { id: 'cat-3', name_ar: 'فساتين سهرة', name_fr: 'Robes de Soirée', slug: 'soiree', image_url: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=600&h=800&fit=crop', sort_order: 3 },
+    { id: 'cat-4', name_ar: 'بوركيني', name_fr: 'Burkinis', slug: 'burkinis', image_url: 'https://images.unsplash.com/photo-1571908599407-cdb918ed83bf?w=600&h=800&fit=crop', sort_order: 4 },
+    { id: 'cat-5', name_ar: 'ملابس كاجوال', name_fr: 'Prêt-à-Porter', slug: 'casual', image_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&h=800&fit=crop', sort_order: 5 },
+    { id: 'cat-6', name_ar: 'إكسسوارات', name_fr: 'Accessoires', slug: 'accessories', image_url: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=600&h=800&fit=crop', sort_order: 6 },
   ],
 
   products: [
@@ -22,9 +22,9 @@ const DEMO_DATA = {
       base_price: 15000, sale_price: null, is_featured: true, is_new_arrival: true, is_best_seller: false,
       stock_quantity: 8, status: 'active', views_count: 124,
       images: [
-        { image_url: 'https://placehold.co/600x800/1a365d/ffffff?text=Caftan+Royal', is_primary: true },
-        { image_url: 'https://placehold.co/600x800/1a365d/ffffff?text=Detail+Broderie', is_primary: false },
-        { image_url: 'https://placehold.co/600x800/1a365d/ffffff?text=Vue+Dos', is_primary: false },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Caftan+Royal', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Detail+Broderie', is_primary: false },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Vue+Dos', is_primary: false },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Bleu Royal', color_name_ar: 'أزرق ملكي', color_hex: '#1a365d', stock_quantity: 2 },
@@ -41,8 +41,8 @@ const DEMO_DATA = {
       base_price: 25000, sale_price: 22000, is_featured: true, is_new_arrival: false, is_best_seller: true,
       stock_quantity: 5, status: 'active', views_count: 256,
       images: [
-        { image_url: 'https://placehold.co/600x800/b7791f/ffffff?text=Karakou+Dore', is_primary: true },
-        { image_url: 'https://placehold.co/600x800/b7791f/ffffff?text=Karakou+Detail', is_primary: false },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Karakou+Dore', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Karakou+Detail', is_primary: false },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Doré', color_name_ar: 'ذهبي', color_hex: '#b7791f', stock_quantity: 1 },
@@ -58,7 +58,7 @@ const DEMO_DATA = {
       base_price: 18000, sale_price: null, is_featured: true, is_new_arrival: false, is_best_seller: false,
       stock_quantity: 12, status: 'active', views_count: 89,
       images: [
-        { image_url: 'https://placehold.co/600x800/1a1a2e/ffffff?text=Robe+Soiree', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Robe+Soiree', is_primary: true },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Noir', color_name_ar: 'أسود', color_hex: '#1a1a2e', stock_quantity: 3 },
@@ -75,7 +75,7 @@ const DEMO_DATA = {
       base_price: 8500, sale_price: null, is_featured: false, is_new_arrival: true, is_best_seller: true,
       stock_quantity: 20, status: 'active', views_count: 198,
       images: [
-        { image_url: 'https://placehold.co/600x800/2d3436/ffffff?text=Burkini+Noir', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Burkini+Noir', is_primary: true },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Noir', color_name_ar: 'أسود', color_hex: '#2d3436', stock_quantity: 5 },
@@ -92,7 +92,7 @@ const DEMO_DATA = {
       base_price: 4500, sale_price: 3800, is_featured: false, is_new_arrival: true, is_best_seller: false,
       stock_quantity: 15, status: 'active', views_count: 67,
       images: [
-        { image_url: 'https://placehold.co/600x800/d4a5a5/ffffff?text=Blouse+Rose', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Blouse+Rose', is_primary: true },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Rose', color_name_ar: 'وردي', color_hex: '#d4a5a5', stock_quantity: 5 },
@@ -108,7 +108,7 @@ const DEMO_DATA = {
       base_price: 6000, sale_price: null, is_featured: true, is_new_arrival: false, is_best_seller: false,
       stock_quantity: 25, status: 'active', views_count: 45,
       images: [
-        { image_url: 'https://placehold.co/600x800/c9a96e/ffffff?text=Set+Accessoires', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Set+Accessoires', is_primary: true },
       ],
       variants: [],
     },
@@ -120,7 +120,7 @@ const DEMO_DATA = {
       base_price: 20000, sale_price: 17500, is_featured: false, is_new_arrival: true, is_best_seller: false,
       stock_quantity: 6, status: 'active', views_count: 112,
       images: [
-        { image_url: 'https://placehold.co/600x800/d63384/ffffff?text=Caftan+Fuchsia', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Caftan+Fuchsia', is_primary: true },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Fuchsia', color_name_ar: 'فوشيا', color_hex: '#d63384', stock_quantity: 2 },
@@ -136,7 +136,7 @@ const DEMO_DATA = {
       base_price: 7500, sale_price: null, is_featured: false, is_new_arrival: false, is_best_seller: true,
       stock_quantity: 18, status: 'active', views_count: 156,
       images: [
-        { image_url: 'https://placehold.co/600x800/0d47a1/ffffff?text=Burkini+Marine', is_primary: true },
+        { image_url: 'https://placehold.co/600x800/f7f5f1/8c8c8c?text=Burkini+Marine', is_primary: true },
       ],
       variants: [
         { size: 'S', color_name_fr: 'Marine', color_name_ar: 'كحلي', color_hex: '#0d47a1', stock_quantity: 4 },
@@ -150,27 +150,27 @@ const DEMO_DATA = {
   homepage_sections: [
     {
       id: 'hs-1', section_type: 'hero_slide',
-      title_ar: 'مجموعة الأناقة الجديدة', title_fr: 'Nouvelle Collection Élégance',
-      subtitle_ar: 'اكتشفي أحدث تصاميم القفاطين والكاراكو', subtitle_fr: 'Découvrez les derniers designs de caftans et karakou',
-      image_url: 'https://placehold.co/1920x800/8B1A2B/ffffff?text=Collection+Elegance',
-      button_text_ar: 'تسوقي الآن', button_text_fr: 'Achetez Maintenant',
-      link_url: 'category.html?slug=caftans', sort_order: 1,
+      title_ar: 'المجموعة الجديدة', title_fr: 'La Nouvelle Collection',
+      subtitle_ar: 'قطع مختارة بعناية للمرأة المعاصرة', subtitle_fr: 'Des pièces choisies avec soin pour la femme contemporaine',
+      image_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=1080&fit=crop',
+      button_text_ar: 'اكتشفي المجموعة', button_text_fr: 'Découvrir',
+      link_url: 'category.html', sort_order: 1,
     },
     {
       id: 'hs-2', section_type: 'hero_slide',
-      title_ar: 'بوركيني صيف 2025', title_fr: 'Burkini Été 2025',
-      subtitle_ar: 'تشكيلة جديدة من البوركيني العصري', subtitle_fr: 'Nouvelle collection de burkini moderne',
-      image_url: 'https://placehold.co/1920x800/0d47a1/ffffff?text=Burkini+Collection',
-      button_text_ar: 'اكتشفي المجموعة', button_text_fr: 'Découvrir la Collection',
-      link_url: 'category.html?slug=burkinis', sort_order: 2,
+      title_ar: 'الأناقة الخالدة', title_fr: 'Élégance Intemporelle',
+      subtitle_ar: 'تصاميم راقية تعكس أصالة الحرفية', subtitle_fr: 'Un savoir-faire raffiné, des créations intemporelles',
+      image_url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=1080&fit=crop',
+      button_text_ar: 'استكشفي', button_text_fr: 'Explorer',
+      link_url: 'category.html?filter=featured', sort_order: 2,
     },
     {
       id: 'hs-3', section_type: 'hero_slide',
-      title_ar: 'عروض خاصة', title_fr: 'Offres Spéciales',
-      subtitle_ar: 'خصومات تصل إلى 30% على منتجات مختارة', subtitle_fr: 'Jusqu\'à 30% de réduction sur une sélection',
-      image_url: 'https://placehold.co/1920x800/c9a96e/ffffff?text=Special+Offers',
-      button_text_ar: 'تصفحي العروض', button_text_fr: 'Voir les Offres',
-      link_url: 'category.html?slug=caftans', sort_order: 3,
+      title_ar: 'وصل حديثاً', title_fr: 'Nouveautés',
+      subtitle_ar: 'اكتشفي أحدث القطع في مجموعتنا', subtitle_fr: 'Découvrez les dernières pièces de la collection',
+      image_url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&h=1080&fit=crop',
+      button_text_ar: 'شاهدي الجديد', button_text_fr: 'Voir les Nouveautés',
+      link_url: 'category.html?filter=new', sort_order: 3,
     },
   ],
 

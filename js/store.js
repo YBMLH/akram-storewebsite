@@ -1,5 +1,5 @@
 // ============================================================
-// Akram Store — Data Store (Supabase + Demo Mode)
+// Collection By Ibtissam — Data Store (Supabase + Demo Mode)
 // Provides a unified API that works with or without Supabase
 // ============================================================
 

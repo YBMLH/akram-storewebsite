@@ -1,5 +1,5 @@
 // ============================================================
-// Akram Store — WhatsApp Order Integration
+// Collection By Ibtissam — WhatsApp Order Integration
 // Generates formatted order messages and opens WhatsApp
 // ============================================================
 

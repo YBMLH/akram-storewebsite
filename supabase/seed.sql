@@ -1,5 +1,5 @@
 -- ============================================================
--- Akram Store — Sample Seed Data
+-- Collection By Ibtissam — Sample Seed Data
 -- Run after schema.sql to populate demo content
 -- ============================================================
 

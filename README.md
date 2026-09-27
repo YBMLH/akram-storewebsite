@@ -1,4 +1,4 @@
-# Akram Store — Boutique Mode Féminine Algérienne
+# Collection By Ibtissam — Boutique Mode Féminine Algérienne
 
 An elegant e-commerce website for an Algerian women's fashion boutique, featuring WhatsApp-based checkout and a full admin dashboard.
 

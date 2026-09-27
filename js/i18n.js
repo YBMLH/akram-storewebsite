@@ -1,5 +1,5 @@
 // ============================================================
-// Akram Store — Internationalization (Arabic / French)
+// Collection By Ibtissam — Internationalization (Arabic / French)
 // ============================================================
 
 const TRANSLATIONS = {
@@ -59,9 +59,11 @@ const TRANSLATIONS = {
 
   // Footer
   'footer.about': { ar: 'من نحن', fr: 'À Propos' },
-  'footer.about_text': { ar: 'متجر أكرم للأزياء النسائية الراقية. نقدم أجود القفاطين والكاراكو والملابس العصرية.', fr: 'Akram Store pour la mode féminine haut de gamme. Nous proposons les meilleurs caftans, karakou et vêtements modernes.' },
-  'footer.links': { ar: 'روابط سريعة', fr: 'Liens Rapides' },
-  'footer.contact': { ar: 'اتصلي بنا', fr: 'Contactez-nous' },
+  'footer.about_text': { ar: 'قطع مختارة بعناية للمرأة المعاصرة. حرفية راقية وتصميم خالد يلتقيان في كل قطعة.', fr: 'Des pièces choisies avec soin pour la femme contemporaine. Un savoir-faire raffiné et un design intemporel dans chaque création.' },
+  'footer.links': { ar: 'روابط', fr: 'Liens' },
+  'footer.shop': { ar: 'المتجر', fr: 'La Boutique' },
+  'footer.help': { ar: 'المساعدة', fr: 'Aide' },
+  'footer.contact': { ar: 'اتصلي بنا', fr: 'Contact' },
   'footer.rights': { ar: 'جميع الحقوق محفوظة', fr: 'Tous droits réservés' },
   'footer.follow': { ar: 'تابعينا', fr: 'Suivez-nous' },
 

@@ -1,5 +1,5 @@
 // ============================================================
-// Akram Store — Configuration
+// Collection By Ibtissam — Configuration
 // Replace these values with your Supabase project credentials
 // ============================================================
 
@@ -15,7 +15,8 @@ const STORE_CONFIG = {
 
   // Store information
   store: {
-    name: { ar: 'متجر أكرم', fr: 'Akram Store' },
+    name: { ar: 'مجموعة إبتسام', fr: 'Collection By Ibtissam' },
+    shortName: { ar: 'CBI', fr: 'CBI' },
     phone: '0550000000',
     address: { ar: 'الجزائر', fr: 'Algérie' },
     currency: 'DA',
