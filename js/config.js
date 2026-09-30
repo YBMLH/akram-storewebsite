@@ -6,8 +6,8 @@
 const STORE_CONFIG = {
   // Supabase credentials — get these from your Supabase project settings
   supabase: {
-    url: '',       // e.g. 'https://xxxxx.supabase.co'
-    anonKey: '',   // Your anon/public key
+    url: 'https://umrygtfilgkdeabucdbg.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnlndGZpbGdrZGVhYnVjZGJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTM5OTYsImV4cCI6MjEwNjM2OTk5Nn0.3kRAT1_jPrfYGuTr70WgRb3QkMlloK-SAjNBsj35bsQ',
   },
 
   // WhatsApp number for orders (international format, no + sign)
@@ -27,12 +27,11 @@ const STORE_CONFIG = {
   // Default language: 'ar' or 'fr'
   defaultLanguage: 'fr',
 
-  // Demo mode: when true (or when Supabase isn't configured),
-  // the site uses embedded sample data
-  demoMode: true,
+  // Demo mode: true = use embedded sample data. false = use Supabase (production).
+  demoMode: false,
 };
 
-// Auto-detect demo mode if Supabase isn't configured
+// Auto-fallback to demo mode if Supabase creds aren't set
 if (!STORE_CONFIG.supabase.url || !STORE_CONFIG.supabase.anonKey) {
   STORE_CONFIG.demoMode = true;
 }
