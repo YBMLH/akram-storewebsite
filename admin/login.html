@@ -52,7 +52,7 @@
     async function checkAuth() {
       const session = await store.getSession();
       if (session) {
-        window.location.href = 'index.html';
+        window.location.href = '/admin/index.html';
       }
     }
 
@@ -70,12 +70,12 @@
       try {
         if (STORE_CONFIG.demoMode) {
           sessionStorage.setItem('akram_admin_demo', 'true');
-          window.location.href = 'index.html';
+          window.location.href = '/admin/index.html';
           return;
         }
 
         await store.signIn(email, password);
-        window.location.href = 'index.html';
+        window.location.href = '/admin/index.html';
       } catch (error) {
         errorEl.textContent = error.message || 'Login failed';
         errorEl.style.display = 'block';

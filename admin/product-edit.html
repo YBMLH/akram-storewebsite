@@ -339,7 +339,7 @@
         }
 
         alert(i18n.currentLang === 'ar' ? 'تم الحفظ بنجاح' : 'Enregistré avec succès');
-        window.location.href = 'products.html';
+        window.location.href = '/admin/products.html';
       } catch (e) {
         console.error('Failed to save product:', e);
         alert('Error: ' + (e.message || 'Failed to save'));
