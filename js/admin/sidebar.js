@@ -77,6 +77,11 @@ function renderAdminTopbar(title, actions = '') {
   const topbar = document.getElementById('admin-topbar');
   if (!topbar) return;
 
+  const currentTheme = getAdminTheme();
+  const nextIcon = currentTheme === 'dark'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
   topbar.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;">
       <button class="sidebar-toggle" onclick="toggleAdminSidebar()" aria-label="Menu">
@@ -88,7 +93,10 @@ function renderAdminTopbar(title, actions = '') {
     </div>
     <div class="admin-topbar-actions">
       ${actions}
-      <button class="lang-toggle" onclick="i18n.toggleLanguage(); location.reload();" style="background: var(--admin-primary); font-size: 0.75rem;">
+      <button class="admin-theme-toggle" onclick="toggleAdminTheme()" aria-label="Toggle theme" title="Toggle theme">
+        ${nextIcon}
+      </button>
+      <button class="lang-toggle" onclick="i18n.toggleLanguage(); location.reload();">
         ${i18n.currentLang === 'ar' ? 'FR' : 'عربي'}
       </button>
     </div>
@@ -98,6 +106,39 @@ function renderAdminTopbar(title, actions = '') {
 function toggleAdminSidebar() {
   document.getElementById('admin-sidebar').classList.toggle('open');
 }
+
+// ---- Theme (light / dark) ----
+function getAdminTheme() {
+  try {
+    const saved = localStorage.getItem('cbi_admin_theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {}
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyAdminTheme(theme) {
+  document.documentElement.setAttribute('data-admin-theme', theme);
+  try { localStorage.setItem('cbi_admin_theme', theme); } catch {}
+}
+
+function toggleAdminTheme() {
+  const next = getAdminTheme() === 'dark' ? 'light' : 'dark';
+  applyAdminTheme(next);
+  // Re-render topbar so the icon flips
+  const topbarTitle = document.querySelector('.admin-topbar h1')?.textContent || '';
+  const actionsWrap = document.querySelector('.admin-topbar-actions');
+  const extraActionsHTML = actionsWrap
+    ? Array.from(actionsWrap.children).filter(c =>
+        !c.classList.contains('admin-theme-toggle') && !c.classList.contains('lang-toggle')
+      ).map(c => c.outerHTML).join('')
+    : '';
+  renderAdminTopbar(topbarTitle, extraActionsHTML);
+}
+
+// Apply saved theme immediately (before DOM ready) to avoid flash
+(function initAdminTheme() {
+  applyAdminTheme(getAdminTheme());
+})();
 
 async function checkAdminAuth() {
   try {

@@ -12,6 +12,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/admin.css">
+  <script>
+    (function() {
+      try {
+        var saved = localStorage.getItem('cbi_admin_theme');
+        var theme = (saved === 'dark' || saved === 'light') ? saved
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-admin-theme', theme);
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body>
   <div class="admin-layout">
