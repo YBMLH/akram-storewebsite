@@ -3,7 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Collection By Ibtissam — Produit</title>
+  <title id="page-title">Collection By Ibtissam — Produit</title>
+  <meta id="meta-description" name="description" content="Collection By Ibtissam — Découvrez notre sélection de mode féminine contemporaine.">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+
+  <link id="canonical-link" rel="canonical" href="https://collectionbyibtissam.com/product">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+
+  <meta property="og:type" content="product">
+  <meta property="og:site_name" content="Collection By Ibtissam">
+  <meta id="og-title" property="og:title" content="Collection By Ibtissam">
+  <meta id="og-description" property="og:description" content="Découvrez notre sélection de mode féminine contemporaine.">
+  <meta id="og-url" property="og:url" content="https://collectionbyibtissam.com/product">
+  <meta id="og-image" property="og:image" content="https://collectionbyibtissam.com/apple-touch-icon.svg">
+  <meta property="og:locale" content="fr_DZ">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta id="tw-title" name="twitter:title" content="Collection By Ibtissam">
+  <meta id="tw-description" name="twitter:description" content="Découvrez notre sélection de mode féminine contemporaine.">
+  <meta id="tw-image" name="twitter:image" content="https://collectionbyibtissam.com/apple-touch-icon.svg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -72,6 +93,7 @@
         }
 
         document.title = `${i18n.field(currentProduct, 'name')} — Collection By Ibtissam`;
+        updateSEO(currentProduct);
         store.incrementViews(currentProduct.id);
         renderProductDetail();
         renderBreadcrumbs();
@@ -90,6 +112,82 @@
         ${cat ? `<a href="category.html?slug=${cat.slug}">${i18n.field(cat, 'name')}</a><span class="sep">›</span>` : ''}
         <span>${i18n.field(currentProduct, 'name')}</span>
       `;
+    }
+
+    function updateSEO(p) {
+      const name = i18n.field(p, 'name');
+      const desc = (i18n.field(p, 'description') || '').slice(0, 200);
+      const primaryImg = p.images && p.images.length
+        ? (p.images.find(i => i.is_primary) || p.images[0]).image_url
+        : `https://collectionbyibtissam.com/apple-touch-icon.svg`;
+      const url = `https://collectionbyibtissam.com/product?slug=${p.slug}`;
+      const price = p.sale_price || p.base_price;
+      const cat = p.category || DEMO_DATA.categories.find(c => c.id === p.category_id);
+      const catName = cat ? i18n.field(cat, 'name') : '';
+
+      const set = (id, attr, val) => {
+        const el = document.getElementById(id);
+        if (el && val != null) el.setAttribute(attr, val);
+      };
+      set('canonical-link', 'href', url);
+      set('meta-description', 'content', desc || `${name} — Collection By Ibtissam`);
+      set('og-title', 'content', `${name} — Collection By Ibtissam`);
+      set('og-description', 'content', desc);
+      set('og-url', 'content', url);
+      set('og-image', 'content', primaryImg);
+      set('tw-title', 'content', `${name} — Collection By Ibtissam`);
+      set('tw-description', 'content', desc);
+      set('tw-image', 'content', primaryImg);
+
+      // Product JSON-LD
+      const old = document.getElementById('ld-product');
+      if (old) old.remove();
+      const script = document.createElement('script');
+      script.id = 'ld-product';
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        name,
+        description: desc,
+        image: (p.images || []).map(i => i.image_url).filter(Boolean),
+        sku: p.id,
+        category: catName,
+        brand: { '@type': 'Brand', name: 'Collection By Ibtissam' },
+        offers: {
+          '@type': 'Offer',
+          url,
+          priceCurrency: 'DZD',
+          price: String(price),
+          availability: p.stock_quantity > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+          itemCondition: 'https://schema.org/NewCondition',
+          seller: { '@type': 'Organization', name: 'Collection By Ibtissam' }
+        }
+      });
+      document.head.appendChild(script);
+
+      // BreadcrumbList JSON-LD
+      const oldBc = document.getElementById('ld-breadcrumb');
+      if (oldBc) oldBc.remove();
+      const bcScript = document.createElement('script');
+      bcScript.id = 'ld-breadcrumb';
+      bcScript.type = 'application/ld+json';
+      const items = [
+        { '@type': 'ListItem', position: 1, name: i18n.t('nav.home'), item: 'https://collectionbyibtissam.com/' }
+      ];
+      if (cat) items.push({
+        '@type': 'ListItem', position: 2, name: catName,
+        item: `https://collectionbyibtissam.com/category?slug=${cat.slug}`
+      });
+      items.push({ '@type': 'ListItem', position: items.length + 1, name });
+      bcScript.textContent = JSON.stringify({
+        '@context': 'https://schema.org/',
+        '@type': 'BreadcrumbList',
+        itemListElement: items
+      });
+      document.head.appendChild(bcScript);
     }
 
     function renderProductDetail() {

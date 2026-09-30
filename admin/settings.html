@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <title>Paramètres — Collection By Ibtissam Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <form class="admin-card" id="settings-form" onsubmit="saveSettings(event)">
+          <div class="admin-card-header">
+            <h2>Informations de la Boutique</h2>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nom (Français)</label>
+                  <input type="text" id="store_name_fr" required>
+                </div>
+                <div class="form-group">
+                  <label>الاسم (عربي)</label>
+                  <input type="text" id="store_name_ar" required dir="rtl">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Numéro WhatsApp <small style="color:var(--color-text-muted);">(format international, sans +)</small></label>
+                  <input type="tel" id="whatsapp_number" required pattern="[0-9]{10,15}" placeholder="213550000000">
+                </div>
+                <div class="form-group">
+                  <label>Téléphone de la Boutique</label>
+                  <input type="tel" id="store_phone" placeholder="0550000000">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Adresse (Français)</label>
+                  <input type="text" id="address_fr" placeholder="Algérie">
+                </div>
+                <div class="form-group">
+                  <label>العنوان (عربي)</label>
+                  <input type="text" id="address_ar" dir="rtl" placeholder="الجزائر">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>URL Instagram</label>
+                  <input type="url" id="instagram" placeholder="https://instagram.com/...">
+                </div>
+                <div class="form-group">
+                  <label>URL Facebook</label>
+                  <input type="url" id="facebook" placeholder="https://facebook.com/...">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Devise</label>
+                <input type="text" id="currency" maxlength="8" placeholder="DA" style="max-width:140px">
+              </div>
+
+              <div class="admin-form-actions">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <span id="save-status" style="align-self:center;color:var(--color-success);font-size:0.8125rem;"></span>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="admin-card" style="margin-top:16px;">
+          <div class="admin-card-header">
+            <h2>Backend & Persistance</h2>
+          </div>
+          <div class="admin-card-body">
+            <div id="mode-badge"></div>
+            <p style="color:var(--color-text-secondary);font-size:0.875rem;line-height:1.7;margin-top:12px;">
+              Configurez vos identifiants Supabase dans <code>js/config.js</code> pour activer la persistance réelle
+              (base de données, uploads d'images, authentification). Sans cela, la boutique reste en mode démo
+              et les modifications ne sont pas enregistrées de manière permanente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    async function loadPage() {
+      if (!await checkAdminAuth()) return;
+      renderAdminSidebar('settings');
+      renderAdminTopbar(i18n.t('admin.settings'));
+
+      const [
+        name, whatsapp, phone, addr, ig, fb, currency
+      ] = await Promise.all([
+        store.getSetting('store_name'),
+        store.getSetting('whatsapp_number'),
+        store.getSetting('store_phone'),
+        store.getSetting('store_address'),
+        store.getSetting('instagram'),
+        store.getSetting('facebook'),
+        store.getSetting('currency'),
+      ]);
+
+      document.getElementById('store_name_fr').value = (name && name.fr) || STORE_CONFIG.store.name.fr;
+      document.getElementById('store_name_ar').value = (name && name.ar) || STORE_CONFIG.store.name.ar;
+      document.getElementById('whatsapp_number').value = whatsapp || STORE_CONFIG.whatsappNumber;
+      document.getElementById('store_phone').value = phone || STORE_CONFIG.store.phone;
+      document.getElementById('address_fr').value = (addr && addr.fr) || STORE_CONFIG.store.address.fr;
+      document.getElementById('address_ar').value = (addr && addr.ar) || STORE_CONFIG.store.address.ar;
+      document.getElementById('instagram').value = ig || '';
+      document.getElementById('facebook').value = fb || '';
+      document.getElementById('currency').value = currency || 'DA';
+
+      const badge = document.getElementById('mode-badge');
+      if (STORE_CONFIG.demoMode) {
+        badge.innerHTML = '<span class="status-badge status-draft">Mode Démo</span>';
+      } else {
+        badge.innerHTML = '<span class="status-badge status-active">Production (Supabase)</span>';
+      }
+    }
+
+    async function saveSettings(e) {
+      e.preventDefault();
+      const status = document.getElementById('save-status');
+      status.textContent = '';
+
+      const nameFr = document.getElementById('store_name_fr').value.trim();
+      const nameAr = document.getElementById('store_name_ar').value.trim();
+      const wa = document.getElementById('whatsapp_number').value.trim();
+      const phone = document.getElementById('store_phone').value.trim();
+      const addrFr = document.getElementById('address_fr').value.trim();
+      const addrAr = document.getElementById('address_ar').value.trim();
+      const ig = document.getElementById('instagram').value.trim();
+      const fb = document.getElementById('facebook').value.trim();
+      const currency = document.getElementById('currency').value.trim() || 'DA';
+
+      try {
+        await Promise.all([
+          store.setSetting('store_name', { fr: nameFr, ar: nameAr }),
+          store.setSetting('whatsapp_number', wa),
+          store.setSetting('store_phone', phone),
+          store.setSetting('store_address', { fr: addrFr, ar: addrAr }),
+          store.setSetting('instagram', ig),
+          store.setSetting('facebook', fb),
+          store.setSetting('currency', currency),
+        ]);
+
+        // Update runtime config so changes take effect immediately without reload
+        STORE_CONFIG.store.name = { fr: nameFr, ar: nameAr };
+        STORE_CONFIG.whatsappNumber = wa;
+        STORE_CONFIG.store.phone = phone;
+        STORE_CONFIG.store.address = { fr: addrFr, ar: addrAr };
+        STORE_CONFIG.store.instagram = ig;
+        STORE_CONFIG.store.facebook = fb;
+        STORE_CONFIG.store.currency = currency;
+
+        status.textContent = '✓ ' + i18n.t('admin.saved');
+        setTimeout(() => { status.textContent = ''; }, 3000);
+      } catch (err) {
+        console.error(err);
+        status.style.color = 'var(--color-danger)';
+        status.textContent = 'Erreur';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPage);
+  </script>
+</body>
+</html>

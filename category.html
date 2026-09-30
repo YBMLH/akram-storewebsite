@@ -3,7 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Collection By Ibtissam — Catégories</title>
+  <title id="page-title">Collection By Ibtissam — La Boutique</title>
+  <meta id="meta-description" name="description" content="Découvrez la collection complète — caftans, karakou, robes de soirée, prêt-à-porter et accessoires.">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+
+  <link id="canonical-link" rel="canonical" href="https://collectionbyibtissam.com/category">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Collection By Ibtissam">
+  <meta id="og-title" property="og:title" content="Collection By Ibtissam — La Boutique">
+  <meta id="og-description" property="og:description" content="Découvrez la collection complète.">
+  <meta id="og-url" property="og:url" content="https://collectionbyibtissam.com/category">
+  <meta property="og:image" content="https://collectionbyibtissam.com/apple-touch-icon.svg">
+  <meta property="og:locale" content="fr_DZ">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Collection By Ibtissam — La Boutique">
+  <meta name="twitter:description" content="Découvrez la collection complète.">
+  <meta name="twitter:image" content="https://collectionbyibtissam.com/apple-touch-icon.svg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -78,7 +99,6 @@
       if (currentCategory) {
         title = i18n.field(currentCategory, 'name');
         description = i18n.field(currentCategory, 'description');
-        document.title = `${title} — Collection By Ibtissam`;
       } else if (currentFilter === 'new') {
         title = i18n.t('home.new_arrivals');
       } else if (currentFilter === 'sale') {
@@ -88,6 +108,9 @@
       } else if (currentFilter === 'featured') {
         title = i18n.t('home.featured');
       }
+
+      document.title = `${title} — Collection By Ibtissam`;
+      updateCategorySEO(title, description);
 
       header.innerHTML = `
         <h1>${title}</h1>
@@ -99,6 +122,35 @@
         <span class="sep">›</span>
         <span>${title}</span>
       `;
+    }
+
+    function updateCategorySEO(title, description) {
+      const url = window.location.href.split('#')[0];
+      const desc = description || `Découvrez ${title.toLowerCase()} chez Collection By Ibtissam — mode féminine contemporaine, livraison en Algérie.`;
+      const set = (id, attr, val) => {
+        const el = document.getElementById(id);
+        if (el && val != null) el.setAttribute(attr, val);
+      };
+      set('canonical-link', 'href', url);
+      set('meta-description', 'content', desc);
+      set('og-title', 'content', `${title} — Collection By Ibtissam`);
+      set('og-description', 'content', desc);
+      set('og-url', 'content', url);
+
+      const oldBc = document.getElementById('ld-breadcrumb');
+      if (oldBc) oldBc.remove();
+      const s = document.createElement('script');
+      s.id = 'ld-breadcrumb';
+      s.type = 'application/ld+json';
+      s.textContent = JSON.stringify({
+        '@context': 'https://schema.org/',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: i18n.t('nav.home'), item: 'https://collectionbyibtissam.com/' },
+          { '@type': 'ListItem', position: 2, name: title }
+        ]
+      });
+      document.head.appendChild(s);
     }
 
     function renderFilters() {

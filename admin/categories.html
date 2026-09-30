@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <title>Catégories — Collection By Ibtissam Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar"></aside>
+    <div class="admin-main">
+      <div class="admin-topbar" id="admin-topbar"></div>
+      <div class="admin-content">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2>Liste des Catégories</h2>
+            <button class="btn btn-primary btn-sm" onclick="openCategoryModal()">+ Nouvelle Catégorie</button>
+          </div>
+          <div class="table-overflow">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:80px">Image</th>
+                  <th>Nom (FR)</th>
+                  <th>الاسم (AR)</th>
+                  <th>Slug</th>
+                  <th>Ordre</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="categories-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Edit Modal -->
+  <div id="cat-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+    <div style="background:white;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;" id="cat-modal-body"></div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/demo-data.js"></script>
+  <script src="../js/i18n.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin/sidebar.js"></script>
+  <script>
+    let editingId = null;
+
+    async function load() {
+      if (!await checkAdminAuth()) return;
+      renderAdminSidebar('categories');
+      renderAdminTopbar(i18n.t('admin.categories'));
+      await refresh();
+    }
+
+    async function refresh() {
+      const cats = await store.getCategories();
+      const tbody = document.getElementById('categories-table');
+      if (!cats.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="admin-empty"><h3>Aucune catégorie</h3><p>Ajoutez votre première catégorie.</p></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = cats.map(c => `
+        <tr>
+          <td><img src="${c.image_url || 'https://placehold.co/60x60/f7f5f1/8c8c8c?text=—'}" alt="" style="width:60px;height:60px;object-fit:cover;"></td>
+          <td><strong>${c.name_fr}</strong></td>
+          <td dir="rtl">${c.name_ar}</td>
+          <td style="font-family:monospace;font-size:0.8125rem;color:var(--color-text-muted);">${c.slug}</td>
+          <td>${c.sort_order || '—'}</td>
+          <td>
+            <div class="table-actions">
+              <button class="table-action" onclick="openCategoryModal('${c.id}')" title="Modifier">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="table-action danger" onclick="deleteCategory('${c.id}', '${c.name_fr.replace(/'/g, "\\'")}')" title="Supprimer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openCategoryModal(id = null) {
+      editingId = id;
+      const cats = await store.getCategories();
+      const cat = id ? cats.find(c => c.id === id) : { name_fr: '', name_ar: '', slug: '', image_url: '', sort_order: cats.length + 1 };
+      const body = document.getElementById('cat-modal-body');
+      body.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <h2 style="margin:0;">${id ? 'Modifier' : 'Nouvelle'} Catégorie</h2>
+          <button onclick="closeCategoryModal()" style="font-size:1.25rem;cursor:pointer;background:none;border:none;color:var(--color-text-muted);">×</button>
+        </div>
+        <form class="admin-form" onsubmit="saveCategory(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom (FR) *</label>
+              <input type="text" id="cat-name-fr" required value="${cat.name_fr || ''}">
+            </div>
+            <div class="form-group">
+              <label>الاسم (AR) *</label>
+              <input type="text" id="cat-name-ar" required dir="rtl" value="${cat.name_ar || ''}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Slug *</label>
+            <input type="text" id="cat-slug" required pattern="[a-z0-9-]+" value="${cat.slug || ''}">
+          </div>
+          <div class="form-group">
+            <label>URL de l'image</label>
+            <input type="url" id="cat-image" value="${cat.image_url || ''}" oninput="document.getElementById('cat-image-preview').src=this.value">
+            <img id="cat-image-preview" src="${cat.image_url || 'https://placehold.co/300x400/f7f5f1/8c8c8c?text=—'}" style="margin-top:8px;max-height:120px;width:auto;object-fit:cover;" onerror="this.src='https://placehold.co/300x400/f7f5f1/8c8c8c?text=—'">
+          </div>
+          <div class="form-group">
+            <label>Ordre d'affichage</label>
+            <input type="number" id="cat-order" value="${cat.sort_order || 1}" min="1" style="max-width:120px">
+          </div>
+          <div class="admin-form-actions">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="button" class="btn btn-outline" onclick="closeCategoryModal()">Annuler</button>
+          </div>
+        </form>
+      `;
+      document.getElementById('cat-modal').style.display = 'flex';
+
+      // Auto-slug from French name
+      document.getElementById('cat-name-fr').addEventListener('input', function() {
+        if (!id) document.getElementById('cat-slug').value = slugify(this.value);
+      });
+    }
+
+    function slugify(s) {
+      return s.toLowerCase()
+        .replace(/[éèê]/g, 'e').replace(/[àâ]/g, 'a').replace(/[ùû]/g, 'u')
+        .replace(/[ïî]/g, 'i').replace(/[ôö]/g, 'o').replace(/ç/g, 'c')
+        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('cat-modal').style.display = 'none';
+    }
+
+    async function saveCategory(e) {
+      e.preventDefault();
+      const data = {
+        name_fr: document.getElementById('cat-name-fr').value.trim(),
+        name_ar: document.getElementById('cat-name-ar').value.trim(),
+        slug: document.getElementById('cat-slug').value.trim(),
+        image_url: document.getElementById('cat-image').value.trim(),
+        sort_order: parseInt(document.getElementById('cat-order').value) || 1,
+      };
+      try {
+        if (editingId) await store.updateCategory(editingId, data);
+        else await store.createCategory(data);
+        closeCategoryModal();
+        await refresh();
+      } catch (err) {
+        alert('Erreur: ' + (err.message || err));
+      }
+    }
+
+    async function deleteCategory(id, name) {
+      if (!confirm(`Supprimer "${name}" ?`)) return;
+      try {
+        await store.deleteCategory(id);
+        await refresh();
+      } catch (err) {
+        alert('Erreur: ' + (err.message || err));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', load);
+    document.addEventListener('click', e => {
+      if (e.target.id === 'cat-modal') closeCategoryModal();
+    });
+  </script>
+</body>
+</html>

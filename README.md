@@ -1,182 +1,175 @@
-# Collection By Ibtissam — Boutique Mode Féminine Algérienne
+# Collection By Ibtissam
 
-An elegant e-commerce website for an Algerian women's fashion boutique, featuring WhatsApp-based checkout and a full admin dashboard.
+Boutique en ligne — mode féminine contemporaine.
+Site statique (HTML + CSS + JavaScript vanilla) déployé sur Vercel.
 
-## ✨ Features
+**Site en ligne:** https://collectionbyibtissam.com
 
-### Customer Website
-- **Homepage** — Hero slider, featured products, new arrivals, best sellers, category browsing
-- **Product Pages** — Multiple images with zoom, size/color selection, stock status, related products
-- **Shopping Cart** — Full cart management with quantity controls
-- **WhatsApp Checkout** — Formatted order messages sent directly via WhatsApp
-- **Bilingual** — Full Arabic (RTL) and French support with one-click toggle
-- **Responsive** — Mobile-first design that works on all devices
-- **Algerian Wilayas** — All 58 wilayas in the checkout dropdown
+---
 
-### Admin Dashboard
-- **Dashboard Overview** — Today's orders, monthly sales, product count, low stock alerts
-- **Product Management** — Full CRUD with bilingual fields, variants (size × color), pricing, stock
-- **Order Management** — View orders, update statuses, filter by status, WhatsApp contact
-- **Customer Management** — Auto-built from orders, total spent tracking
-- **Homepage Builder** — View and manage hero slider content
-- **Media Library** — Upload and organize images (requires Supabase Storage)
+## Fonctionnalités
 
-### Technical Highlights
-- **Zero-cost stack** — Vercel (frontend) + Supabase free tier (backend)
-- **Demo Mode** — Works immediately with embedded sample data before Supabase is configured
-- **No build step** — Pure HTML, CSS, and vanilla JavaScript
-- **Product Variants** — Size × color combinations with independent stock tracking
-- **Algerian phone validation** — Validates 05/06/07 format
-- **Cash-on-delivery flow** — Designed for the Algerian market
+### Côté client
+- Page d'accueil avec hero slider, catégories, produits vedettes, nouveautés, best-sellers
+- Catalogue avec filtres et tri
+- Pages produit avec galerie zoomable, variantes (tailles, couleurs), quantité
+- Panier persisté (localStorage)
+- Checkout via WhatsApp (avec formulaire de livraison, 58 wilayas)
+- Bilingue Français ↔ Arabe (RTL)
+- SEO complet : Open Graph, Twitter Cards, JSON-LD (Product, BreadcrumbList, Organization), sitemap, robots.txt
+- Responsive (mobile-first)
 
-## 🚀 Quick Start
+### Côté admin (`/admin/login`)
+- **Tableau de bord** — statistiques du jour et du mois
+- **Commandes** — recherche, filtres par statut / date, modal de détail, facture imprimable, export CSV, WhatsApp direct
+- **Analyses** — chiffre d'affaires, courbes 7/30/90 jours, top wilayas, statuts, produits populaires
+- **Produits** — recherche, filtres (catégorie, statut), tri, sélection multiple + suppression en masse, duplication
+- **Édition produit** — bilingue, prix promo, stock, variantes, aperçus d'images en direct, champs SEO
+- **Catégories** — CRUD complet avec aperçu image
+- **Clients** — dérivés des commandes, historique par client, export CSV, contact WhatsApp
+- **Médiathèque** — bibliothèque d'images (nécessite Supabase Storage en production)
+- **Page d'accueil** — gestion des slides du hero
+- **Paramètres** — nom du magasin, WhatsApp, adresse, réseaux sociaux, devise
 
-### 1. View the Demo
-Simply open `index.html` in a browser. The site works in demo mode with sample data.
+---
 
-### 2. Deploy to Vercel
-1. Push this repository to GitHub
-2. Go to [vercel.com](https://vercel.com) and import the repository
-3. Vercel auto-detects the static site — no build configuration needed
-4. Your site will be live at `https://your-project.vercel.app`
+## Développement local
 
-> The included `vercel.json` enables clean URLs (no `.html` extensions) and optimized caching for static assets.
+C'est un site statique — aucun build nécessaire.
 
-### 3. Connect Supabase (for production)
+```bash
+# Servir localement
+python3 -m http.server 8000
+# ou
+npx serve .
+```
 
-#### a. Create a Supabase Project
-1. Go to [supabase.com](https://supabase.com) and create a free project
-2. Note your **Project URL** and **anon/public key** from Settings → API
+Puis ouvrir http://localhost:8000
 
-#### b. Set Up the Database
-1. Go to the **SQL Editor** in your Supabase dashboard
-2. Run `supabase/schema.sql` to create tables, indexes, RLS policies, and triggers
-3. Optionally run `supabase/seed.sql` to populate sample data
+---
 
-#### c. Configure Storage Buckets
-In Supabase dashboard → Storage:
-1. Create buckets: `products`, `banners`, `media`
-2. Set them all to **Public**
-3. Add storage policies to allow authenticated uploads
+## Déploiement
 
-#### d. Create Admin User
-In Supabase dashboard → Authentication:
-1. Create a new user with email and password
-2. This will be your admin login for the dashboard
+Le site est déployé automatiquement sur **Vercel** à chaque push sur `main`.
 
-#### e. Update Configuration
-Edit `js/config.js`:
-```javascript
+Configuration : voir `vercel.json` (clean URLs, headers cache).
+
+---
+
+## Mode démo vs Mode production
+
+Par défaut le site fonctionne en **mode démo** : toutes les données (produits, commandes, catégories, paramètres) proviennent de `js/demo-data.js` et sont conservées en mémoire uniquement pendant la session en cours. Les modifications de l'admin sont perdues au rechargement de la page.
+
+Pour passer en **mode production** avec vraie base de données, images uploadables, authentification admin et persistance permanente, il faut connecter **Supabase**.
+
+### Configurer Supabase (~15 minutes)
+
+**1. Créer un projet Supabase**
+- Aller sur https://supabase.com et créer un compte gratuit
+- Créer un nouveau projet (choisir la région Europe pour la meilleure latence depuis l'Algérie)
+- Noter le mot de passe de la base de données
+
+**2. Configurer la base de données**
+- Dans le projet Supabase → **SQL Editor** → New query
+- Copier-coller tout le contenu de `supabase/schema.sql` et exécuter
+- Optionnel : copier-coller `supabase/seed.sql` pour des données d'exemple
+
+**3. Configurer le stockage d'images**
+- **Storage** → New bucket → nommer `media` → cocher "Public bucket" → Create
+- Dans les policies du bucket : autoriser SELECT public, INSERT/UPDATE/DELETE pour authenticated
+
+**4. Créer l'utilisateur admin**
+- **Authentication → Users → Add user** → email + mot de passe
+- Cet email/mot de passe sera utilisé sur `/admin/login`
+
+**5. Récupérer les identifiants**
+- **Project Settings → API**
+- Copier `Project URL` et `anon public key`
+
+**6. Modifier `js/config.js`**
+```js
 const STORE_CONFIG = {
   supabase: {
-    url: 'https://your-project.supabase.co',
-    anonKey: 'your-anon-key',
+    url: 'https://VOTRE-PROJET.supabase.co',
+    anonKey: 'eyJhbGc...VOTRE_CLE_ANON',
   },
-  whatsappNumber: '213550000000', // Your WhatsApp number
-  demoMode: false, // Set to false for production
   // ...
+  demoMode: false,  // désactive le mode démo
 };
 ```
 
-## 📁 Project Structure
+**7. Ajouter le CDN Supabase dans les pages HTML**
+
+Avant `<script src="js/config.js">` dans chaque page (index, product, category, cart, admin/*), ajouter :
+```html
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+```
+
+**8. Déployer**
+```bash
+git add -A && git commit -m "Enable production Supabase" && git push
+```
+
+Vercel redéploie automatiquement.
+
+---
+
+## Structure du projet
 
 ```
 ├── index.html              # Homepage
-├── product.html            # Product detail page
-├── category.html           # Category listing / search
-├── cart.html               # Cart + WhatsApp checkout
+├── product.html            # Page produit
+├── category.html           # Catalogue avec filtres
+├── cart.html               # Panier + checkout WhatsApp
+├── robots.txt / sitemap.xml
+├── favicon.svg / apple-touch-icon.svg
+├── vercel.json             # Config déploiement
+│
+├── admin/                  # Dashboard admin (noindex)
+│   ├── login.html
+│   ├── index.html          # Tableau de bord
+│   ├── orders.html         # Gestion commandes
+│   ├── products.html       # Liste produits
+│   ├── product-edit.html   # Édition produit
+│   ├── categories.html     # Gestion catégories
+│   ├── customers.html      # Clients
+│   ├── analytics.html      # Analyses
+│   ├── homepage.html       # Slides du hero
+│   ├── media.html          # Médiathèque
+│   └── settings.html       # Paramètres du magasin
+│
 ├── css/
-│   ├── style.css           # Customer website styles
-│   └── admin.css           # Admin dashboard styles
+│   ├── style.css           # Styles client
+│   └── admin.css           # Styles admin
+│
 ├── js/
-│   ├── config.js           # Configuration (Supabase credentials, store info)
-│   ├── demo-data.js        # Sample data for demo mode
-│   ├── i18n.js             # Arabic/French translations
-│   ├── store.js            # Data layer (Supabase or demo)
-│   ├── cart.js             # Shopping cart (localStorage)
-│   ├── whatsapp.js         # WhatsApp message builder
-│   ├── wilayas.js          # All 58 Algerian wilayas
-│   ├── components.js       # Shared UI (header, footer, product card)
+│   ├── config.js           # Config (Supabase, WhatsApp, etc.)
+│   ├── store.js            # DataStore (Supabase + demo)
+│   ├── cart.js             # Panier (localStorage)
+│   ├── i18n.js             # Traductions FR/AR
+│   ├── whatsapp.js         # Génération messages commande
+│   ├── wilayas.js          # 58 wilayas d'Algérie
+│   ├── demo-data.js        # Données démo
+│   ├── components.js       # Header, footer, product card
 │   └── admin/
-│       └── sidebar.js      # Admin sidebar & shared components
-├── admin/
-│   ├── login.html          # Admin login
-│   ├── index.html          # Dashboard
-│   ├── orders.html         # Order management
-│   ├── products.html       # Product listing
-│   ├── product-edit.html   # Add/edit product
-│   ├── customers.html      # Customer list
-│   ├── homepage.html       # Homepage builder
-│   └── media.html          # Media library
-├── supabase/
-│   ├── schema.sql          # Complete database schema
-│   └── seed.sql            # Sample data
-└── assets/
-    └── logo.svg            # Store logo
+│       └── sidebar.js      # Sidebar + auth admin
+│
+├── assets/
+│   └── logo.svg
+│
+└── supabase/               # Backend (à configurer)
+    ├── schema.sql          # Schéma DB
+    └── seed.sql            # Données initiales
 ```
 
-## 🎨 Customization
+---
 
-### Store Branding
-Edit `js/config.js` to change:
-- Store name (Arabic and French)
-- WhatsApp number
-- Phone number
-- Social media links
-- Default language
+## Personnalisation rapide
 
-### Colors
-Edit the CSS custom properties in `css/style.css`:
-```css
-:root {
-  --color-primary: #8B1A2B;     /* Deep burgundy */
-  --color-secondary: #C9A96E;   /* Warm gold */
-  --color-bg: #FAFAF7;          /* Warm off-white */
-}
-```
+- **Nom & branding** : `js/config.js` → `STORE_CONFIG.store.name`
+- **Numéro WhatsApp** : `js/config.js` → `STORE_CONFIG.whatsappNumber` (format international sans `+`)
+- **Palette / typographie** : `css/style.css` → tokens `--color-*` et `--font-*`
+- **Contenu du hero** : `js/demo-data.js` → `homepage_sections`
+- **Wilayas / prix de livraison** : `js/wilayas.js`
 
-### Translations
-Add or modify translations in `js/i18n.js`.
-
-### Categories
-Update the categories in `supabase/seed.sql` or through the admin panel once Supabase is connected.
-
-## 📱 WhatsApp Order Format
-
-When a customer places an order, this formatted message is generated:
-
-```
-🛍️ NOUVELLE COMMANDE
-
-Informations Client
-━━━━━━━━━━━━━━━
-
-👤 Nom: Sarah Benali
-📞 Tél: 0550123456
-📍 Wilaya: Annaba
-🏠 Adresse: Sidi Amar
-
-Produits Commandés
-━━━━━━━━━━━━━━━
-
-1️⃣ Caftan Royal Bleu
-   Couleur: Bleu Royal
-   Taille: M
-   Quantité: 1
-   Prix: 15 000 DA
-
-━━━━━━━━━━━━━━━
-
-💰 Total: 15 000 DA
-```
-
-## 🔒 Security
-
-- Supabase Row Level Security (RLS) ensures public users can only read active products and insert orders
-- Admin operations require authentication
-- Phone number validation prevents invalid inputs
-- All user inputs are sanitized
-
-## 📄 License
-
-MIT — Free to use for commercial projects.
+Une fois Supabase configuré, la plupart de ces paramètres se modifient depuis `/admin/settings`.

@@ -156,8 +156,16 @@ class DataStore {
 
   async createOrder(orderData) {
     if (this.isDemo) {
-      console.log('Demo mode: Order would be created', orderData);
-      return { id: 'demo-order-' + Date.now(), order_number: 9999, ...orderData };
+      const maxNo = DEMO_DATA.orders.reduce((m, o) => Math.max(m, o.order_number || 0), 1000);
+      const order = {
+        id: 'demo-order-' + Date.now(),
+        order_number: maxNo + 1,
+        status: 'new',
+        created_at: new Date().toISOString(),
+        ...orderData,
+      };
+      DEMO_DATA.orders.unshift(order);
+      return order;
     }
 
     // Insert order
@@ -225,7 +233,11 @@ class DataStore {
   }
 
   async updateOrderStatus(orderId, status) {
-    if (this.isDemo) return { id: orderId, status };
+    if (this.isDemo) {
+      const o = DEMO_DATA.orders.find(x => x.id === orderId);
+      if (o) o.status = status;
+      return o || { id: orderId, status };
+    }
     const { data, error } = await this.supabase
       .from('orders')
       .update({ status })
@@ -239,7 +251,18 @@ class DataStore {
   // ---- Admin: Product CRUD ----
 
   async createProduct(productData) {
-    if (this.isDemo) return { id: 'demo-' + Date.now(), ...productData };
+    if (this.isDemo) {
+      const p = {
+        id: 'demo-' + Date.now(),
+        views_count: 0,
+        stock_quantity: 0,
+        images: [],
+        variants: [],
+        ...productData,
+      };
+      DEMO_DATA.products.unshift(p);
+      return p;
+    }
     const { data, error } = await this.supabase
       .from('products')
       .insert(productData)
@@ -250,7 +273,11 @@ class DataStore {
   }
 
   async updateProduct(id, productData) {
-    if (this.isDemo) return { id, ...productData };
+    if (this.isDemo) {
+      const idx = DEMO_DATA.products.findIndex(p => p.id === id);
+      if (idx >= 0) DEMO_DATA.products[idx] = { ...DEMO_DATA.products[idx], ...productData };
+      return DEMO_DATA.products[idx];
+    }
     const { data, error } = await this.supabase
       .from('products')
       .update(productData)
@@ -262,7 +289,10 @@ class DataStore {
   }
 
   async deleteProduct(id) {
-    if (this.isDemo) return true;
+    if (this.isDemo) {
+      DEMO_DATA.products = DEMO_DATA.products.filter(p => p.id !== id);
+      return true;
+    }
     const { error } = await this.supabase
       .from('products')
       .delete()
@@ -352,13 +382,18 @@ class DataStore {
 
   async getSetting(key) {
     if (this.isDemo) {
+      const stored = this._readLocalSettings();
+      if (stored[key] !== undefined) return stored[key];
       const defaults = {
         store_name: STORE_CONFIG.store.name,
         whatsapp_number: STORE_CONFIG.whatsappNumber,
         store_phone: STORE_CONFIG.store.phone,
+        store_address: STORE_CONFIG.store.address,
         currency: STORE_CONFIG.store.currency,
+        instagram: STORE_CONFIG.store.instagram,
+        facebook: STORE_CONFIG.store.facebook,
       };
-      return defaults[key] || null;
+      return defaults[key] !== undefined ? defaults[key] : null;
     }
     const { data, error } = await this.supabase
       .from('site_settings')
@@ -367,6 +402,115 @@ class DataStore {
       .single();
     if (error) return null;
     return data.value;
+  }
+
+  async setSetting(key, value) {
+    if (this.isDemo) {
+      const stored = this._readLocalSettings();
+      stored[key] = value;
+      localStorage.setItem('cbi_settings', JSON.stringify(stored));
+      return { key, value };
+    }
+    const { data, error } = await this.supabase
+      .from('site_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  _readLocalSettings() {
+    try { return JSON.parse(localStorage.getItem('cbi_settings')) || {}; }
+    catch { return {}; }
+  }
+
+  // ---- Admin: Category CRUD ----
+
+  async createCategory(data) {
+    if (this.isDemo) {
+      const cat = { id: 'cat-' + Date.now(), sort_order: DEMO_DATA.categories.length + 1, ...data };
+      DEMO_DATA.categories.push(cat);
+      return cat;
+    }
+    const { data: row, error } = await this.supabase
+      .from('categories').insert(data).select().single();
+    if (error) throw error;
+    return row;
+  }
+
+  async updateCategory(id, data) {
+    if (this.isDemo) {
+      const idx = DEMO_DATA.categories.findIndex(c => c.id === id);
+      if (idx >= 0) DEMO_DATA.categories[idx] = { ...DEMO_DATA.categories[idx], ...data };
+      return DEMO_DATA.categories[idx];
+    }
+    const { data: row, error } = await this.supabase
+      .from('categories').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return row;
+  }
+
+  async deleteCategory(id) {
+    if (this.isDemo) {
+      DEMO_DATA.categories = DEMO_DATA.categories.filter(c => c.id !== id);
+      return true;
+    }
+    const { error } = await this.supabase.from('categories').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  // ---- Analytics ----
+
+  async getAnalytics(days = 30) {
+    const orders = await this.getOrders();
+    const now = new Date();
+    const from = new Date(now.getTime() - days * 86400000);
+
+    const inRange = orders.filter(o => new Date(o.created_at) >= from && o.status !== 'cancelled');
+
+    // Daily sales series
+    const byDay = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now.getTime() - (days - 1 - i) * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      byDay[key] = { date: key, sales: 0, orders: 0 };
+    }
+    inRange.forEach(o => {
+      const key = new Date(o.created_at).toISOString().slice(0, 10);
+      if (byDay[key]) {
+        byDay[key].sales += Number(o.total_amount || 0);
+        byDay[key].orders += 1;
+      }
+    });
+
+    // Orders by wilaya
+    const byWilaya = {};
+    inRange.forEach(o => {
+      byWilaya[o.wilaya] = (byWilaya[o.wilaya] || 0) + 1;
+    });
+    const wilayaList = Object.entries(byWilaya)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([wilaya, count]) => ({ wilaya, count }));
+
+    // Orders by status
+    const byStatus = {};
+    orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
+
+    // Top products by views
+    const products = await this.getProducts({ sort: 'popular', limit: 5 });
+
+    return {
+      totalSales: inRange.reduce((s, o) => s + Number(o.total_amount || 0), 0),
+      totalOrders: inRange.length,
+      avgOrderValue: inRange.length ? Math.round(inRange.reduce((s, o) => s + Number(o.total_amount || 0), 0) / inRange.length) : 0,
+      byDay: Object.values(byDay),
+      byWilaya: wilayaList,
+      byStatus,
+      topProducts: products,
+    };
   }
 }
 
