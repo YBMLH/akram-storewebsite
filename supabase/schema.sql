@@ -43,6 +43,8 @@ CREATE TABLE products (
   stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
   low_stock_threshold INT DEFAULT 5,
   views_count INT DEFAULT 0,
+  seo_description_ar TEXT,
+  seo_description_fr TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -378,9 +380,26 @@ CREATE POLICY "Admin full access media"
   USING (auth.role() = 'authenticated');
 
 -- ============================================================
--- STORAGE BUCKETS (run in Supabase dashboard or via API)
+-- STORAGE BUCKETS + POLICIES
 -- ============================================================
--- INSERT INTO storage.buckets (id, name, public) VALUES
---   ('products', 'products', TRUE),
---   ('banners', 'banners', TRUE),
---   ('media', 'media', TRUE);
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('media', 'media', TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+-- Anyone can view media (public bucket)
+CREATE POLICY "Public read media bucket"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'media');
+
+-- Only authenticated admins can upload / update / delete
+CREATE POLICY "Admin upload media"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'media' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin update media"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'media' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin delete media"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'media' AND auth.role() = 'authenticated');
