@@ -831,6 +831,185 @@
   background: var(--admin-surface) !important;
 }
 
+/* ---- Toasts ---- */
+.admin-toast {
+  position: fixed;
+  bottom: 24px;
+  inset-inline-end: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-hairline);
+  border-radius: var(--admin-radius-md);
+  box-shadow: var(--admin-shadow-lg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 10000;
+  transform: translateY(120%);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+  max-width: calc(100vw - 48px);
+  -webkit-backdrop-filter: var(--admin-blur);
+  backdrop-filter: var(--admin-blur);
+  background: var(--admin-surface-glass);
+}
+.admin-toast.show { transform: translateY(0); opacity: 1; }
+.admin-toast.toast-success { border-color: rgba(52,199,89,0.3); }
+.admin-toast.toast-success svg { color: var(--admin-success); }
+.admin-toast.toast-error { border-color: rgba(255,59,48,0.3); }
+.admin-toast.toast-error svg { color: var(--admin-danger); }
+.admin-toast.toast-info svg { color: var(--admin-primary); }
+.admin-toast.toast-loading svg { color: var(--admin-text-muted); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Confirm overlay ---- */
+.admin-confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.admin-confirm-overlay.show { opacity: 1; }
+
+.admin-confirm-card {
+  background: var(--admin-surface);
+  border-radius: var(--admin-radius-lg);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--admin-shadow-xl);
+  border: 1px solid var(--admin-hairline);
+  transform: scale(0.9);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.admin-confirm-overlay.show .admin-confirm-card { transform: scale(1); }
+
+.admin-confirm-msg {
+  color: var(--admin-text);
+  font-size: 0.9375rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.admin-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---- Drag-over state for upload areas ---- */
+.image-upload-area.drag-over,
+[data-upload].drag-over {
+  border-color: var(--admin-primary) !important;
+  background: var(--admin-primary-soft) !important;
+  color: var(--admin-primary);
+}
+
+/* ---- Upload button (compact) ---- */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all var(--admin-transition-fast);
+  font-family: var(--admin-font);
+}
+.upload-btn:hover {
+  background: var(--admin-primary-soft);
+  border-color: var(--admin-primary);
+  color: var(--admin-primary);
+}
+
+/* ---- Help tooltip ---- */
+.help-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--admin-text-tertiary);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+  margin-inline-start: 4px;
+  position: relative;
+  font-family: var(--admin-font);
+}
+.help-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--admin-text);
+  color: var(--admin-text-inverse);
+  padding: 6px 10px;
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  white-space: nowrap;
+  max-width: 240px;
+  white-space: normal;
+  min-width: 180px;
+  z-index: 100;
+  box-shadow: var(--admin-shadow-md);
+}
+
+/* ---- Low-stock widget ---- */
+.alert-widget {
+  background: linear-gradient(135deg, rgba(255,149,0,0.08), rgba(255,59,48,0.04));
+  border: 1px solid rgba(255,149,0,0.2);
+  border-radius: var(--admin-radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.alert-widget-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--admin-radius-sm);
+  background: rgba(255,149,0,0.2);
+  color: var(--admin-warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.alert-widget-content { flex: 1; }
+.alert-widget-content strong {
+  display: block;
+  font-size: 0.9375rem;
+  color: var(--admin-text);
+  margin-bottom: 2px;
+}
+.alert-widget-content p {
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 900px) {
   .admin-sidebar {

@@ -239,7 +239,8 @@
 
     async function bulkDelete() {
       if (!selected.size) return;
-      if (!confirm(`Supprimer ${selected.size} produit(s) ?`)) return;
+      const ok = await confirmAction(`Supprimer ${selected.size} produit${selected.size > 1 ? 's' : ''} ?`, { confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
       try {
         for (const id of selected) await store.deleteProduct(id);
         selected.clear();
@@ -247,7 +248,7 @@
         allProducts = await store.getProducts({});
         applyFilters();
       } catch (e) {
-        alert('Erreur: ' + (e.message || e));
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
       }
     }
 
@@ -264,18 +265,19 @@
         allProducts = await store.getProducts({});
         applyFilters();
       } catch (e) {
-        alert('Erreur: ' + (e.message || e));
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
       }
     }
 
     async function deleteProduct(id, name) {
-      if (!confirm(`Supprimer "${name}" ?`)) return;
+      const ok = await confirmAction(`Supprimer "${name}" ?`, { confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
       try {
         await store.deleteProduct(id);
         allProducts = allProducts.filter(p => p.id !== id);
         applyFilters();
       } catch (e) {
-        alert('Erreur: ' + (e.message || e));
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
       }
     }
 

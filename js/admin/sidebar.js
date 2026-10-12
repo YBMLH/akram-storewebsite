@@ -107,6 +107,112 @@ function toggleAdminSidebar() {
   document.getElementById('admin-sidebar').classList.toggle('open');
 }
 
+// ---- Toast notifications ----
+function showToast(message, type = 'success', duration = 3000) {
+  document.querySelectorAll('.admin-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = `admin-toast toast-${type}`;
+  const icons = {
+    success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    loading: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+  };
+  toast.innerHTML = `${icons[type] || icons.info}<span>${message}</span>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  if (duration > 0) {
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+  return toast;
+}
+
+// ---- Confirm dialog (nicer than browser's confirm) ----
+function confirmAction(message, { confirmLabel = 'Confirmer', cancelLabel = 'Annuler', danger = false } = {}) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'admin-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="admin-confirm-card">
+        <p class="admin-confirm-msg">${message}</p>
+        <div class="admin-confirm-actions">
+          <button class="btn btn-outline btn-sm" data-action="cancel">${cancelLabel}</button>
+          <button class="btn btn-sm" data-action="ok" style="background:${danger ? 'var(--admin-danger)' : 'var(--admin-primary)'};color:white;border:none;">${confirmLabel}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const close = (val) => {
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 200);
+      resolve(val);
+    };
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) close(false);
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (action === 'ok') close(true);
+      if (action === 'cancel') close(false);
+    });
+  });
+}
+
+// ---- Image upload helper ----
+async function uploadImageWithToast(file, folder = 'uploads') {
+  const toast = showToast('Upload en cours…', 'loading', 0);
+  try {
+    const url = await store.uploadImage(file, folder);
+    toast.remove();
+    showToast('Image uploadée', 'success');
+    return url;
+  } catch (e) {
+    toast.remove();
+    showToast('Erreur: ' + (e.message || e), 'error', 5000);
+    console.error('[upload]', e);
+    return null;
+  }
+}
+
+// Attach drop-and-click upload to a container element
+// Usage: initImageUpload(dropEl, (url) => { ... }, { folder: 'products', multiple: true })
+function initImageUpload(element, onUpload, options = {}) {
+  const folder = options.folder || 'uploads';
+  const multiple = options.multiple === true;
+
+  const openPicker = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = multiple;
+    input.onchange = async e => {
+      for (const file of e.target.files) {
+        const url = await uploadImageWithToast(file, folder);
+        if (url) onUpload(url, file);
+      }
+    };
+    input.click();
+  };
+
+  element.addEventListener('click', openPicker);
+  element.addEventListener('dragover', e => {
+    e.preventDefault();
+    element.classList.add('drag-over');
+  });
+  element.addEventListener('dragleave', () => element.classList.remove('drag-over'));
+  element.addEventListener('drop', async e => {
+    e.preventDefault();
+    element.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type && f.type.startsWith('image/'));
+    for (const file of files) {
+      const url = await uploadImageWithToast(file, folder);
+      if (url) onUpload(url, file);
+    }
+  });
+}
+
 // ---- Theme (light / dark) ----
 function getAdminTheme() {
   try {

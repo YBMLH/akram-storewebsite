@@ -425,6 +425,105 @@ class DataStore {
     catch { return {}; }
   }
 
+  // ---- Media Upload ----
+
+  async uploadImage(file, folder = 'uploads') {
+    if (!file) throw new Error('No file provided');
+    if (!file.type || !file.type.startsWith('image/')) throw new Error('File is not an image');
+
+    if (this.isDemo || !this.supabase) {
+      // Demo: return a base64 data URL (works for previews but doesn't persist)
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const safeName = (file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const ext = safeName.includes('.') ? safeName.split('.').pop() : 'jpg';
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+
+    const { error: upErr } = await this.supabase.storage
+      .from('media')
+      .upload(path, file, { cacheControl: '31536000', contentType: file.type });
+    if (upErr) throw upErr;
+
+    const { data: urlData } = this.supabase.storage.from('media').getPublicUrl(path);
+
+    // Index in the media table (best-effort — don't fail upload if this fails)
+    try {
+      await this.supabase.from('media').insert({
+        file_name: safeName,
+        file_url: urlData.publicUrl,
+        file_size: file.size,
+        mime_type: file.type,
+        folder,
+      });
+    } catch (e) {
+      console.warn('[store] media index insert failed:', e);
+    }
+
+    return urlData.publicUrl;
+  }
+
+  async listMedia(folder = null) {
+    if (this.isDemo || !this.supabase) return [];
+    let q = this.supabase.from('media').select('*').order('created_at', { ascending: false });
+    if (folder) q = q.eq('folder', folder);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async deleteMedia(id, fileUrl) {
+    if (this.isDemo || !this.supabase) return true;
+    // Extract path from public URL (…/storage/v1/object/public/media/<path>)
+    const match = fileUrl && fileUrl.match(/\/storage\/v1\/object\/public\/media\/(.+)$/);
+    if (match) {
+      await this.supabase.storage.from('media').remove([decodeURIComponent(match[1])]);
+    }
+    await this.supabase.from('media').delete().eq('id', id);
+    return true;
+  }
+
+  // ---- Homepage Section CRUD ----
+
+  async createHomepageSection(data) {
+    if (this.isDemo) {
+      const s = { id: 'hs-' + Date.now(), is_active: true, sort_order: DEMO_DATA.homepage_sections.length + 1, ...data };
+      DEMO_DATA.homepage_sections.push(s);
+      return s;
+    }
+    const { data: row, error } = await this.supabase
+      .from('homepage_sections').insert(data).select().single();
+    if (error) throw error;
+    return row;
+  }
+
+  async updateHomepageSection(id, data) {
+    if (this.isDemo) {
+      const idx = DEMO_DATA.homepage_sections.findIndex(s => s.id === id);
+      if (idx >= 0) DEMO_DATA.homepage_sections[idx] = { ...DEMO_DATA.homepage_sections[idx], ...data };
+      return DEMO_DATA.homepage_sections[idx];
+    }
+    const { data: row, error } = await this.supabase
+      .from('homepage_sections').update(data).eq('id', id).select().single();
+    if (error) throw error;
+    return row;
+  }
+
+  async deleteHomepageSection(id) {
+    if (this.isDemo) {
+      DEMO_DATA.homepage_sections = DEMO_DATA.homepage_sections.filter(s => s.id !== id);
+      return true;
+    }
+    const { error } = await this.supabase.from('homepage_sections').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
   // ---- Admin: Category CRUD ----
 
   async createCategory(data) {

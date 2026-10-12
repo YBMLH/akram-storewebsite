@@ -199,7 +199,7 @@
         if (o) o.status = status;
       } catch (e) {
         console.error(e);
-        alert('Erreur mise à jour du statut');
+        showToast('Erreur mise à jour du statut', 'error');
         allOrders = await store.getOrders();
         applyFilters();
       }
@@ -366,7 +366,7 @@
 
     function exportCSV() {
       const rows = getFiltered();
-      if (!rows.length) return alert('Aucune commande à exporter.');
+      if (!rows.length) { showToast('Aucune commande à exporter', 'info'); return; }
       const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
       const header = ['Numéro', 'Date', 'Client', 'Téléphone', 'Wilaya', 'Commune', 'Adresse', 'Statut', 'Total (DA)', 'Notes'];
       const lines = [header.map(escape).join(',')];

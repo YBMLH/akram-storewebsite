@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
-  <title>Collection By Ibtissam — Médiathèque</title>
+  <title>Médiathèque — Collection By Ibtissam Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,44 +29,32 @@
     <div class="admin-main">
       <div class="admin-topbar" id="admin-topbar"></div>
       <div class="admin-content">
-        <div class="admin-card" style="margin-bottom: 16px;">
+
+        <div class="admin-card" style="margin-bottom:16px;">
           <div class="admin-card-body">
-            <div class="image-upload-area" id="upload-area" onclick="triggerUpload()">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <div class="image-upload-area" id="upload-area">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              <p>Cliquez ou glissez-déposez vos images ici</p>
-              <p style="font-size:0.75rem;color:var(--color-text-muted);">PNG, JPG, WebP — Max 5MB</p>
+              <p style="margin-top:8px;"><strong>Cliquez</strong> ou <strong>glissez-déposez</strong> vos images</p>
+              <p style="font-size:0.75rem;color:var(--admin-text-muted);">PNG, JPG, WebP — plusieurs à la fois</p>
             </div>
-            <input type="file" id="file-input" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
           </div>
-        </div>
-
-        <!-- Folder filter -->
-        <div class="category-filters" style="margin-bottom: 16px;">
-          <button class="filter-chip active" onclick="filterFolder(null, this)">Tous</button>
-          <button class="filter-chip" onclick="filterFolder('caftans', this)">Caftans</button>
-          <button class="filter-chip" onclick="filterFolder('burkinis', this)">Burkinis</button>
-          <button class="filter-chip" onclick="filterFolder('banners', this)">Bannières</button>
-          <button class="filter-chip" onclick="filterFolder('logo', this)">Logo</button>
         </div>
 
         <div class="admin-card">
           <div class="admin-card-header">
-            <h2>📸 Images</h2>
+            <h2>Médiathèque <span id="count-badge" style="color:var(--admin-text-muted);font-weight:400;font-size:0.875rem;"></span></h2>
+            <input type="search" id="search" placeholder="Rechercher..." oninput="renderMedia()" style="padding:7px 12px;border:1px solid var(--admin-border);border-radius:var(--admin-radius-sm);font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);min-width:200px;">
           </div>
           <div class="admin-card-body">
-            <div class="image-preview-grid" id="media-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
-            </div>
-            <div class="admin-empty" id="media-empty">
+            <div id="media-grid" class="image-preview-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));gap:12px;"></div>
+            <div id="media-empty" class="admin-empty" style="display:none;">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
               </svg>
               <h3>Médiathèque vide</h3>
-              <p>Uploadez vos images pour les utiliser dans vos produits et bannières.</p>
-              <p style="font-size:0.75rem;color:var(--color-text-muted);margin-top:8px;">
-                Nécessite Supabase Storage configuré. En mode démo, l'upload est simulé.
-              </p>
+              <p>Uploadez vos images pour les utiliser partout dans votre boutique.</p>
             </div>
           </div>
         </div>
@@ -82,100 +70,89 @@
   <script src="../js/cart.js"></script>
   <script src="../js/admin/sidebar.js"></script>
   <script>
-    async function loadMedia() {
-      if (!await checkAdminAuth()) return;
+    let allMedia = [];
 
+    async function loadPage() {
+      if (!await checkAdminAuth()) return;
       renderAdminSidebar('media');
       renderAdminTopbar(i18n.t('admin.media'));
+
+      initImageUpload(document.getElementById('upload-area'), async (url) => {
+        await refresh();
+      }, { folder: 'library', multiple: true });
+
+      await refresh();
     }
 
-    function triggerUpload() {
-      document.getElementById('file-input').click();
-    }
-
-    function handleFiles(files) {
+    async function refresh() {
       if (STORE_CONFIG.demoMode) {
-        alert('En mode démo, l\'upload est simulé. Configurez Supabase Storage pour uploader de vraies images.');
-        // Show preview of selected files
-        const grid = document.getElementById('media-grid');
-        document.getElementById('media-empty').style.display = 'none';
-
-        Array.from(files).forEach(file => {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            const div = document.createElement('div');
-            div.className = 'image-preview';
-            div.style.aspectRatio = '1';
-            div.innerHTML = `
-              <img src="${e.target.result}" alt="${file.name}">
-              <button class="image-preview-remove" onclick="this.parentElement.remove()">×</button>
-            `;
-            grid.appendChild(div);
-          };
-          reader.readAsDataURL(file);
-        });
+        allMedia = [];
+        document.getElementById('media-grid').innerHTML = '';
+        const empty = document.getElementById('media-empty');
+        empty.style.display = 'block';
+        empty.innerHTML = `
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <h3>Mode démo</h3>
+          <p>La médiathèque nécessite Supabase. Configurez-le pour uploader et stocker vos images.</p>
+        `;
         return;
       }
-
-      // Real upload with Supabase Storage
-      Array.from(files).forEach(async file => {
-        try {
-          const fileName = `${Date.now()}-${file.name}`;
-          const { data, error } = await store.supabase.storage
-            .from('media')
-            .upload(fileName, file);
-          if (error) throw error;
-
-          const { data: urlData } = store.supabase.storage
-            .from('media')
-            .getPublicUrl(fileName);
-
-          // Save to media table
-          await store.supabase.from('media').insert({
-            file_name: file.name,
-            file_url: urlData.publicUrl,
-            file_size: file.size,
-            mime_type: file.type,
-          });
-
-          loadMedia();
-        } catch (e) {
-          console.error('Upload failed:', e);
-          alert('Upload failed: ' + e.message);
-        }
-      });
+      try {
+        allMedia = await store.listMedia();
+        renderMedia();
+      } catch (e) {
+        console.error(e);
+        showToast('Erreur chargement médias: ' + (e.message || e), 'error', 5000);
+      }
     }
 
-    function filterFolder(folder, btn) {
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      // Would filter media by folder in production
+    function renderMedia() {
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const list = q ? allMedia.filter(m => (m.file_name || '').toLowerCase().includes(q)) : allMedia;
+      const grid = document.getElementById('media-grid');
+      const empty = document.getElementById('media-empty');
+
+      document.getElementById('count-badge').textContent = list.length ? `— ${list.length}` : '';
+
+      if (!list.length) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      grid.innerHTML = list.map(m => `
+        <div class="image-preview" style="aspect-ratio:1;cursor:pointer;" onclick="copyUrl('${m.file_url}')" title="Cliquer pour copier l'URL">
+          <img src="${m.file_url}" alt="${m.file_name}" style="width:100%;height:100%;object-fit:cover;">
+          <button class="image-preview-remove" onclick="event.stopPropagation(); removeMedia('${m.id}', '${m.file_url.replace(/'/g, "\\'")}')" title="Supprimer">×</button>
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:6px 10px;background:linear-gradient(transparent, rgba(0,0,0,0.75));color:#fff;font-size:0.6875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${m.file_name || '—'}
+          </div>
+        </div>
+      `).join('');
     }
 
-    // Drag and drop
-    const dropArea = document.getElementById('upload-area');
-    if (dropArea) {
-      ['dragenter', 'dragover'].forEach(ev => {
-        document.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
-      });
-      dropArea.addEventListener('dragover', e => {
-        e.preventDefault();
-        dropArea.style.borderColor = 'var(--admin-primary)';
-        dropArea.style.background = 'rgba(139,26,43,0.05)';
-      });
-      dropArea.addEventListener('dragleave', e => {
-        dropArea.style.borderColor = '';
-        dropArea.style.background = '';
-      });
-      dropArea.addEventListener('drop', e => {
-        e.preventDefault();
-        dropArea.style.borderColor = '';
-        dropArea.style.background = '';
-        handleFiles(e.dataTransfer.files);
-      });
+    async function copyUrl(url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('URL copiée', 'success');
+      } catch (e) {
+        showToast('Impossible de copier', 'error');
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', loadMedia);
+    async function removeMedia(id, fileUrl) {
+      const ok = await confirmAction('Supprimer cette image ?', { confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
+      try {
+        await store.deleteMedia(id, fileUrl);
+        await refresh();
+        showToast('Image supprimée', 'success');
+      } catch (e) {
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPage);
   </script>
 </body>
 </html>

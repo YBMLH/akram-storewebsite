@@ -130,9 +130,21 @@
             <input type="text" id="cat-slug" required pattern="[a-z0-9-]+" value="${cat.slug || ''}">
           </div>
           <div class="form-group">
-            <label>URL de l'image</label>
-            <input type="url" id="cat-image" value="${cat.image_url || ''}" oninput="document.getElementById('cat-image-preview').src=this.value">
-            <img id="cat-image-preview" src="${cat.image_url || 'https://placehold.co/300x400/f7f5f1/8c8c8c?text=—'}" style="margin-top:8px;max-height:120px;width:auto;object-fit:cover;" onerror="this.src='https://placehold.co/300x400/f7f5f1/8c8c8c?text=—'">
+            <label>Image de la catégorie</label>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <img id="cat-image-preview" src="${cat.image_url || 'https://placehold.co/180x180/f7f5f1/8c8c8c?text=—'}" style="width:120px;height:120px;object-fit:cover;border-radius:var(--admin-radius-sm);border:1px solid var(--admin-hairline);" onerror="this.src='https://placehold.co/180x180/f7f5f1/8c8c8c?text=—'">
+              <div style="flex:1;">
+                <input type="hidden" id="cat-image" value="${cat.image_url || ''}">
+                <button type="button" class="upload-btn" id="cat-upload-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Uploader une image
+                </button>
+                <details style="margin-top:10px;">
+                  <summary style="cursor:pointer;font-size:0.75rem;color:var(--admin-text-muted);">Ou coller une URL</summary>
+                  <input type="url" id="cat-image-url" value="${cat.image_url || ''}" placeholder="https://..." style="margin-top:6px;" oninput="document.getElementById('cat-image').value=this.value;document.getElementById('cat-image-preview').src=this.value||'https://placehold.co/180x180/f7f5f1/8c8c8c?text=—'">
+                </details>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label>Ordre d'affichage</label>
@@ -150,6 +162,15 @@
       document.getElementById('cat-name-fr').addEventListener('input', function() {
         if (!id) document.getElementById('cat-slug').value = slugify(this.value);
       });
+
+      // Wire upload button
+      const uploadBtn = document.getElementById('cat-upload-btn');
+      initImageUpload(uploadBtn, (url) => {
+        document.getElementById('cat-image').value = url;
+        document.getElementById('cat-image-preview').src = url;
+        const urlInput = document.getElementById('cat-image-url');
+        if (urlInput) urlInput.value = url;
+      }, { folder: 'categories', multiple: false });
     }
 
     function slugify(s) {
@@ -177,18 +198,21 @@
         else await store.createCategory(data);
         closeCategoryModal();
         await refresh();
+        showToast('Catégorie enregistrée', 'success');
       } catch (err) {
-        alert('Erreur: ' + (err.message || err));
+        showToast('Erreur: ' + (err.message || err), 'error', 5000);
       }
     }
 
     async function deleteCategory(id, name) {
-      if (!confirm(`Supprimer "${name}" ?`)) return;
+      const ok = await confirmAction(`Supprimer la catégorie "${name}" ?`, { confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
       try {
         await store.deleteCategory(id);
         await refresh();
+        showToast('Catégorie supprimée', 'success');
       } catch (err) {
-        alert('Erreur: ' + (err.message || err));
+        showToast('Erreur: ' + (err.message || err), 'error', 5000);
       }
     }
 

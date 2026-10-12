@@ -123,14 +123,23 @@
                 </label>
               </div>
 
-              <!-- Image URLs -->
+              <!-- Images with upload -->
               <div class="form-group">
-                <label>Images (URLs, une par ligne — la première sera l'image principale)</label>
-                <textarea id="image_urls" rows="4" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" oninput="renderImagePreviews()"></textarea>
-                <small style="color:var(--color-text-muted);">
-                  Astuce : uploadez d'abord dans la Médiathèque puis copiez les URLs ici. Ou collez des URLs directes.
-                </small>
-                <div id="image-previews" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(90px, 1fr));gap:8px;margin-top:12px;"></div>
+                <label>Images <span class="help-tip" data-tip="Glissez-déposez des images ou cliquez pour en choisir depuis votre appareil. La première image sera l'image principale.">?</span></label>
+                <div class="image-upload-area" id="image-dropzone">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <p style="margin-top:8px;"><strong>Cliquez</strong> ou <strong>glissez-déposez</strong> vos images</p>
+                  <p style="font-size:0.75rem;color:var(--admin-text-muted);">PNG, JPG, WebP · Plusieurs images acceptées</p>
+                </div>
+                <div id="image-previews" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));gap:10px;margin-top:14px;"></div>
+                <details style="margin-top:12px;">
+                  <summary style="cursor:pointer;font-size:0.8125rem;color:var(--admin-text-muted);">Ou coller des URLs d'images (avancé)</summary>
+                  <textarea id="image_urls_manual" rows="3" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" oninput="syncManualUrls()" style="margin-top:8px;"></textarea>
+                </details>
               </div>
 
               <!-- SEO Fields -->
@@ -178,6 +187,7 @@
   <script>
     let editingProduct = null;
     let variantCount = 0;
+    let productImages = []; // array of image URLs
 
     async function loadPage() {
       if (!await checkAdminAuth()) return;
@@ -221,6 +231,32 @@
             .replace(/(^-|-$)/g, '');
         }
       });
+
+      // Attach image upload to drop zone
+      const dropzone = document.getElementById('image-dropzone');
+      initImageUpload(dropzone, (url) => {
+        productImages.push(url);
+        renderImagePreviews();
+      }, { folder: 'products', multiple: true });
+    }
+
+    function syncManualUrls() {
+      const text = document.getElementById('image_urls_manual').value;
+      const urls = text.split('\n').map(s => s.trim()).filter(Boolean);
+      productImages = urls;
+      renderImagePreviews();
+    }
+
+    function removeImage(index) {
+      productImages.splice(index, 1);
+      renderImagePreviews();
+    }
+
+    function makeImagePrimary(index) {
+      if (index === 0) return;
+      const [img] = productImages.splice(index, 1);
+      productImages.unshift(img);
+      renderImagePreviews();
     }
 
     async function loadExistingProduct(id) {
@@ -246,8 +282,11 @@
       document.getElementById('is_best_seller').checked = p.is_best_seller;
 
       // Images
-      if (p.images) {
-        document.getElementById('image_urls').value = p.images.map(i => i.image_url).join('\n');
+      if (p.images && p.images.length) {
+        productImages = p.images
+          .slice()
+          .sort((a, b) => (a.is_primary ? -1 : b.is_primary ? 1 : 0))
+          .map(i => i.image_url);
         renderImagePreviews();
       }
 
@@ -266,16 +305,21 @@
     }
 
     function renderImagePreviews() {
-      const urls = document.getElementById('image_urls').value
-        .split('\n').map(s => s.trim()).filter(Boolean);
       const container = document.getElementById('image-previews');
       if (!container) return;
-      container.innerHTML = urls.map((url, i) => `
-        <div style="position:relative;aspect-ratio:1;overflow:hidden;background:var(--admin-bg);">
-          <img src="${url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2;this.src='https://placehold.co/100x100/f7f5f1/8c8c8c?text=X'">
-          ${i === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#111;color:#fff;font-size:0.625rem;padding:2px 6px;text-transform:uppercase;letter-spacing:1px;">Principal</span>' : ''}
+      container.innerHTML = productImages.map((url, i) => `
+        <div class="image-preview">
+          <img src="${url}" onerror="this.style.opacity=0.2;">
+          ${i === 0
+            ? '<span style="position:absolute;top:6px;left:6px;background:var(--admin-primary);color:#fff;font-size:0.625rem;padding:3px 7px;border-radius:var(--admin-radius-xs);font-weight:600;letter-spacing:0.5px;">PRINCIPAL</span>'
+            : `<button type="button" onclick="makeImagePrimary(${i})" title="Définir comme image principale" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:0.625rem;padding:3px 7px;border-radius:var(--admin-radius-xs);border:none;cursor:pointer;backdrop-filter:blur(4px);">★</button>`
+          }
+          <button type="button" class="image-preview-remove" onclick="removeImage(${i})" title="Supprimer">×</button>
         </div>
       `).join('');
+      // Keep hidden manual textarea in sync for anyone switching to that mode
+      const manual = document.getElementById('image_urls_manual');
+      if (manual && document.activeElement !== manual) manual.value = productImages.join('\n');
     }
 
     function addVariantRow(data = null) {
@@ -308,9 +352,7 @@
     async function saveProduct(e) {
       e.preventDefault();
 
-      const imageUrls = document.getElementById('image_urls').value
-        .split('\n').map(s => s.trim()).filter(Boolean);
-      const images = imageUrls.map((url, i) => ({ image_url: url, is_primary: i === 0, sort_order: i }));
+      const images = productImages.map((url, i) => ({ image_url: url, is_primary: i === 0, sort_order: i }));
 
       const variants = Array.from(document.querySelectorAll('#variants-container > div')).map(row => ({
         size: row.querySelector('.variant-size')?.value.trim() || '',
@@ -348,11 +390,11 @@
           await store.createProduct(productData);
         }
 
-        alert(i18n.currentLang === 'ar' ? 'تم الحفظ بنجاح' : 'Enregistré avec succès');
-        window.location.href = '/admin/products.html';
+        showToast(i18n.currentLang === 'ar' ? 'تم الحفظ بنجاح' : 'Produit enregistré', 'success');
+        setTimeout(() => { window.location.href = '/admin/products.html'; }, 600);
       } catch (e) {
         console.error('Failed to save product:', e);
-        alert('Error: ' + (e.message || 'Failed to save'));
+        showToast('Erreur: ' + (e.message || 'Enregistrement échoué'), 'error', 5000);
       }
     }
 

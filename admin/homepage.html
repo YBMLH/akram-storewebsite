@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
-  <title>Collection By Ibtissam — Homepage Builder</title>
+  <title>Page d'Accueil — Collection By Ibtissam Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -29,30 +29,30 @@
     <div class="admin-main">
       <div class="admin-topbar" id="admin-topbar"></div>
       <div class="admin-content">
-        <!-- Hero Slides -->
-        <div class="admin-card" style="margin-bottom: 16px;">
+
+        <div class="admin-card" style="margin-bottom:16px;">
           <div class="admin-card-header">
-            <h2>🎠 Slides du Hero</h2>
-            <button class="btn btn-primary btn-sm" onclick="addSlide()">+ Ajouter un Slide</button>
+            <h2>Slides du Hero</h2>
+            <button class="btn btn-primary btn-sm" onclick="openSlideModal()">+ Nouveau Slide</button>
           </div>
           <div class="admin-card-body" id="hero-slides-admin"></div>
         </div>
 
-        <!-- Preview -->
         <div class="admin-card">
-          <div class="admin-card-header">
-            <h2>👁️ Aperçu</h2>
-          </div>
-          <div class="admin-card-body">
-            <p style="color: var(--color-text-muted); margin-bottom: 16px;">
-              Les changements sur cette page nécessitent une connexion Supabase active pour être enregistrés.
-              En mode démo, les modifications ne seront pas persistées.
-            </p>
-            <a href="../index.html" target="_blank" class="btn btn-outline btn-sm">Voir la page d'accueil →</a>
+          <div class="admin-card-body" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong style="color:var(--admin-text);">Aperçu de la boutique</strong>
+              <p style="color:var(--admin-text-secondary);font-size:0.8125rem;margin-top:4px;">Voir comment les visiteurs voient votre site</p>
+            </div>
+            <a href="/" target="_blank" class="btn btn-outline btn-sm">Ouvrir la boutique →</a>
           </div>
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="slide-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px);">
+    <div style="background:var(--admin-surface);border-radius:var(--admin-radius-lg);max-width:620px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--admin-hairline);" id="slide-modal-body"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -64,66 +64,238 @@
   <script src="../js/admin/sidebar.js"></script>
   <script>
     let slides = [];
+    let editingSlideId = null;
 
-    async function loadPage() {
+    async function load() {
       if (!await checkAdminAuth()) return;
-
       renderAdminSidebar('homepage');
       renderAdminTopbar(i18n.t('admin.homepage'));
+      await refresh();
+    }
 
-      // Load existing slides
-      slides = await store.getHomepageSections();
-      slides = slides.filter(s => s.section_type === 'hero_slide');
+    async function refresh() {
+      slides = (await store.getHomepageSections()).filter(s => s.section_type === 'hero_slide');
+      slides.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       renderSlides();
     }
 
     function renderSlides() {
       const container = document.getElementById('hero-slides-admin');
-
-      if (slides.length === 0) {
+      if (!slides.length) {
         container.innerHTML = `
           <div class="admin-empty">
-            <p>Aucun slide configuré. Ajoutez votre premier slide.</p>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <h3>Aucun slide</h3>
+            <p>Ajoutez votre premier slide pour animer la page d'accueil.</p>
           </div>
         `;
         return;
       }
-
-      container.innerHTML = slides.map((slide, index) => `
-        <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;padding:16px;background:var(--admin-bg);border-radius:8px;margin-bottom:12px;">
+      container.innerHTML = slides.map((s, i) => `
+        <div style="display:grid;grid-template-columns:200px 1fr auto;gap:16px;padding:16px;background:var(--admin-surface-2);border:1px solid var(--admin-hairline);border-radius:var(--admin-radius-md);margin-bottom:12px;align-items:center;">
           <div>
-            <img src="${slide.image_url || 'https://placehold.co/200x100/ccc/666?text=No+Image'}" alt="" style="width:100%;border-radius:6px;aspect-ratio:2/1;object-fit:cover;">
+            <img src="${s.image_url || 'https://placehold.co/200x100/f7f5f1/8c8c8c?text=No+Image'}" alt="" style="width:100%;border-radius:var(--admin-radius-sm);aspect-ratio:2/1;object-fit:cover;" onerror="this.src='https://placehold.co/200x100/f7f5f1/8c8c8c?text=No+Image'">
           </div>
-          <div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div style="min-width:0;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
               <div>
-                <small style="color:var(--color-text-muted);">Titre (FR)</small>
-                <div style="font-weight:600;">${slide.title_fr || '—'}</div>
+                <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--admin-text-muted);">Titre (FR)</div>
+                <div style="font-weight:500;color:var(--admin-text);">${s.title_fr || '—'}</div>
               </div>
               <div>
-                <small style="color:var(--color-text-muted);">العنوان (عربي)</small>
-                <div style="font-weight:600;" dir="rtl">${slide.title_ar || '—'}</div>
+                <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--admin-text-muted);">العنوان (AR)</div>
+                <div style="font-weight:500;color:var(--admin-text);" dir="rtl">${s.title_ar || '—'}</div>
               </div>
             </div>
-            <div style="font-size:0.8125rem;color:var(--color-text-secondary);">
-              ${slide.subtitle_fr || ''}
+            <div style="font-size:0.8125rem;color:var(--admin-text-secondary);">${s.subtitle_fr || ''}</div>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+              <span class="status-badge ${s.is_active !== false ? 'status-active' : 'status-archived'}">${s.is_active !== false ? 'Actif' : 'Inactif'}</span>
+              <span style="font-size:0.75rem;color:var(--admin-text-muted);">Ordre: ${s.sort_order || 1}</span>
             </div>
-            <div style="margin-top:8px;display:flex;gap:8px;">
-              <span class="status-badge ${slide.is_active !== false ? 'status-active' : 'status-archived'}">${slide.is_active !== false ? 'Actif' : 'Inactif'}</span>
-              <span style="font-size:0.75rem;color:var(--color-text-muted);">Ordre: ${slide.sort_order}</span>
-            </div>
+          </div>
+          <div class="table-actions" style="flex-direction:column;">
+            <button class="table-action" onclick="moveSlide('${s.id}', -1)" ${i === 0 ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''} title="Monter">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
+            <button class="table-action" onclick="moveSlide('${s.id}', 1)" ${i === slides.length - 1 ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''} title="Descendre">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button class="table-action" onclick="openSlideModal('${s.id}')" title="Modifier">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="table-action danger" onclick="deleteSlide('${s.id}')" title="Supprimer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
           </div>
         </div>
       `).join('');
     }
 
-    function addSlide() {
-      alert(STORE_CONFIG.demoMode
-        ? 'En mode démo, les slides sont en lecture seule. Configurez Supabase pour ajouter/modifier les slides.'
-        : 'Fonctionnalité disponible avec Supabase connecté.');
+    function openSlideModal(id = null) {
+      editingSlideId = id;
+      const slide = id ? slides.find(s => s.id === id) : {
+        title_fr: '', title_ar: '',
+        subtitle_fr: '', subtitle_ar: '',
+        button_text_fr: 'Découvrir', button_text_ar: 'اكتشفي',
+        link_url: 'category.html',
+        image_url: '',
+        sort_order: slides.length + 1,
+        is_active: true,
+      };
+      const body = document.getElementById('slide-modal-body');
+      body.innerHTML = `
+        <div style="padding:20px 24px;border-bottom:1px solid var(--admin-hairline);display:flex;justify-content:space-between;align-items:center;">
+          <h2 style="margin:0;">${id ? 'Modifier le slide' : 'Nouveau slide'}</h2>
+          <button onclick="closeSlideModal()" style="font-size:1.25rem;cursor:pointer;background:none;border:none;color:var(--admin-text-muted);">×</button>
+        </div>
+        <form class="admin-form" onsubmit="saveSlide(event)" style="padding:20px 24px;max-width:none;">
+          <div class="form-group">
+            <label>Image <span class="help-tip" data-tip="Image en arrière-plan du slide, idéalement 1920×800 ou plus large.">?</span></label>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <img id="slide-image-preview" src="${slide.image_url || 'https://placehold.co/200x100/f7f5f1/8c8c8c?text=—'}" style="width:200px;height:100px;object-fit:cover;border-radius:var(--admin-radius-sm);border:1px solid var(--admin-hairline);" onerror="this.src='https://placehold.co/200x100/f7f5f1/8c8c8c?text=—'">
+              <div style="flex:1;">
+                <input type="hidden" id="slide-image" value="${slide.image_url || ''}">
+                <button type="button" class="upload-btn" id="slide-upload-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Uploader une image
+                </button>
+                <details style="margin-top:10px;">
+                  <summary style="cursor:pointer;font-size:0.75rem;color:var(--admin-text-muted);">Ou coller une URL</summary>
+                  <input type="url" value="${slide.image_url || ''}" placeholder="https://..." style="margin-top:6px;" oninput="document.getElementById('slide-image').value=this.value;document.getElementById('slide-image-preview').src=this.value||'https://placehold.co/200x100/f7f5f1/8c8c8c?text=—'">
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Titre (FR)</label>
+              <input type="text" id="s-title-fr" value="${slide.title_fr || ''}" placeholder="La Nouvelle Collection">
+            </div>
+            <div class="form-group">
+              <label>العنوان (AR)</label>
+              <input type="text" id="s-title-ar" value="${slide.title_ar || ''}" dir="rtl" placeholder="المجموعة الجديدة">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Sous-titre (FR)</label>
+              <input type="text" id="s-sub-fr" value="${slide.subtitle_fr || ''}">
+            </div>
+            <div class="form-group">
+              <label>العنوان الفرعي (AR)</label>
+              <input type="text" id="s-sub-ar" value="${slide.subtitle_ar || ''}" dir="rtl">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Texte du bouton (FR)</label>
+              <input type="text" id="s-btn-fr" value="${slide.button_text_fr || ''}">
+            </div>
+            <div class="form-group">
+              <label>نص الزر (AR)</label>
+              <input type="text" id="s-btn-ar" value="${slide.button_text_ar || ''}" dir="rtl">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Lien du bouton <span class="help-tip" data-tip="Où le bouton emmène le visiteur. Ex: category.html?slug=caftans">?</span></label>
+              <input type="text" id="s-link" value="${slide.link_url || ''}" placeholder="category.html">
+            </div>
+            <div class="form-group">
+              <label>Ordre</label>
+              <input type="number" id="s-order" value="${slide.sort_order || 1}" min="1" style="max-width:120px;">
+            </div>
+          </div>
+
+          <label class="toggle-switch">
+            <input type="checkbox" id="s-active" ${slide.is_active !== false ? 'checked' : ''}>
+            <span class="toggle-track"></span>
+            Slide actif (visible sur la boutique)
+          </label>
+
+          <div class="admin-form-actions">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <button type="button" class="btn btn-outline" onclick="closeSlideModal()">Annuler</button>
+          </div>
+        </form>
+      `;
+      document.getElementById('slide-modal').style.display = 'flex';
+
+      initImageUpload(document.getElementById('slide-upload-btn'), (url) => {
+        document.getElementById('slide-image').value = url;
+        document.getElementById('slide-image-preview').src = url;
+      }, { folder: 'hero-slides', multiple: false });
     }
 
-    document.addEventListener('DOMContentLoaded', loadPage);
+    function closeSlideModal() {
+      document.getElementById('slide-modal').style.display = 'none';
+    }
+
+    async function saveSlide(e) {
+      e.preventDefault();
+      const data = {
+        section_type: 'hero_slide',
+        title_fr: document.getElementById('s-title-fr').value.trim(),
+        title_ar: document.getElementById('s-title-ar').value.trim(),
+        subtitle_fr: document.getElementById('s-sub-fr').value.trim(),
+        subtitle_ar: document.getElementById('s-sub-ar').value.trim(),
+        button_text_fr: document.getElementById('s-btn-fr').value.trim(),
+        button_text_ar: document.getElementById('s-btn-ar').value.trim(),
+        link_url: document.getElementById('s-link').value.trim(),
+        image_url: document.getElementById('slide-image').value.trim(),
+        sort_order: parseInt(document.getElementById('s-order').value) || 1,
+        is_active: document.getElementById('s-active').checked,
+      };
+      try {
+        if (editingSlideId) await store.updateHomepageSection(editingSlideId, data);
+        else await store.createHomepageSection(data);
+        closeSlideModal();
+        await refresh();
+        showToast('Slide enregistré', 'success');
+      } catch (err) {
+        showToast('Erreur: ' + (err.message || err), 'error', 5000);
+      }
+    }
+
+    async function deleteSlide(id) {
+      const ok = await confirmAction('Supprimer ce slide ?', { confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
+      try {
+        await store.deleteHomepageSection(id);
+        await refresh();
+        showToast('Slide supprimé', 'success');
+      } catch (err) {
+        showToast('Erreur: ' + (err.message || err), 'error', 5000);
+      }
+    }
+
+    async function moveSlide(id, delta) {
+      const idx = slides.findIndex(s => s.id === id);
+      if (idx < 0) return;
+      const other = idx + delta;
+      if (other < 0 || other >= slides.length) return;
+      const a = slides[idx], b = slides[other];
+      const aOrder = a.sort_order || idx + 1;
+      const bOrder = b.sort_order || other + 1;
+      try {
+        await Promise.all([
+          store.updateHomepageSection(a.id, { sort_order: bOrder }),
+          store.updateHomepageSection(b.id, { sort_order: aOrder }),
+        ]);
+        await refresh();
+      } catch (err) {
+        showToast('Erreur: ' + (err.message || err), 'error', 5000);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', load);
+    document.addEventListener('click', e => {
+      if (e.target.id === 'slide-modal') closeSlideModal();
+    });
   </script>
 </body>
 </html>

@@ -29,10 +29,16 @@
     <div class="admin-main">
       <div class="admin-topbar" id="admin-topbar"></div>
       <div class="admin-content" id="admin-content">
+        <!-- Low stock alert banner -->
+        <div id="low-stock-widget"></div>
+
+        <!-- New orders alert banner -->
+        <div id="new-orders-widget"></div>
+
         <!-- Stats -->
         <div class="stats-grid" id="stats-grid"></div>
 
-        <!-- Recent Orders & Low Stock -->
+        <!-- Recent Orders & Popular Products -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="admin-card">
             <div class="admin-card-header">
@@ -140,17 +146,52 @@
       // Load recent orders
       try {
         const orders = await store.getOrders({ limit: 5 });
+        const newOrders = orders.filter(o => o.status === 'new');
+        if (newOrders.length) {
+          document.getElementById('new-orders-widget').innerHTML = `
+            <div class="alert-widget" style="background:linear-gradient(135deg, rgba(0,122,255,0.08), rgba(90,200,250,0.04));border-color:rgba(0,122,255,0.2);">
+              <div class="alert-widget-icon" style="background:rgba(0,122,255,0.2);color:var(--admin-primary);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
+              <div class="alert-widget-content">
+                <strong>${newOrders.length} nouvelle${newOrders.length > 1 ? 's' : ''} commande${newOrders.length > 1 ? 's' : ''}</strong>
+                <p>À contacter et confirmer</p>
+              </div>
+              <a href="/admin/orders.html" class="btn btn-primary btn-sm">Voir →</a>
+            </div>
+          `;
+        }
         document.getElementById('recent-orders').innerHTML = orders.slice(0, 5).map(order => `
-          <tr>
-            <td>#${order.order_number}</td>
+          <tr onclick="window.location.href='/admin/orders.html'" style="cursor:pointer;">
+            <td><strong>#${order.order_number}</strong></td>
             <td>${order.customer_name}</td>
             <td>${i18n.formatPrice(order.total_amount)}</td>
             <td>${getStatusLabel(order.status)}</td>
           </tr>
-        `).join('') || '<tr><td colspan="4" style="text-align:center;color:#999;">Aucune commande</td></tr>';
+        `).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--admin-text-muted);">Aucune commande</td></tr>';
       } catch (e) {
         console.error('Failed to load recent orders:', e);
       }
+
+      // Load low stock
+      try {
+        const allProducts = await store.getProducts({});
+        const lowStock = allProducts.filter(p => p.status === 'active' && p.stock_quantity <= (p.low_stock_threshold || 5));
+        if (lowStock.length) {
+          document.getElementById('low-stock-widget').innerHTML = `
+            <div class="alert-widget">
+              <div class="alert-widget-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div class="alert-widget-content">
+                <strong>${lowStock.length} produit${lowStock.length > 1 ? 's' : ''} en stock faible</strong>
+                <p>${lowStock.slice(0, 3).map(p => i18n.field(p, 'name') + ` (${p.stock_quantity})`).join(' · ')}${lowStock.length > 3 ? '…' : ''}</p>
+              </div>
+              <a href="/admin/products.html" class="btn btn-outline btn-sm">Gérer →</a>
+            </div>
+          `;
+        }
+      } catch (e) { console.warn(e); }
 
       // Load popular products
       try {

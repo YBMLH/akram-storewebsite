@@ -199,7 +199,7 @@
     function exportCSV() {
       const q = document.getElementById('search').value.trim().toLowerCase();
       const rows = allCustomers.filter(c => !q || `${c.name} ${c.phone} ${c.wilaya}`.toLowerCase().includes(q));
-      if (!rows.length) return alert('Aucun client à exporter.');
+      if (!rows.length) { showToast('Aucun client à exporter', 'info'); return; }
       const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
       const lines = [['Nom', 'Téléphone', 'Wilaya', 'Commandes', 'Total Dépensé', 'Dernière Commande'].map(esc).join(',')];
       rows.forEach(c => lines.push([c.name, c.phone, c.wilaya, c.total_orders, c.total_spent, c.last_order_at].map(esc).join(',')));
