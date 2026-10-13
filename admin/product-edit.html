@@ -326,14 +326,14 @@
       variantCount++;
       const container = document.getElementById('variants-container');
       const row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 80px 40px;gap:8px;align-items:end;margin-bottom:8px;';
+      row.style.cssText = 'display:grid;grid-template-columns:90px 1fr 60px 100px 80px 36px;gap:8px;align-items:end;margin-bottom:8px;';
       row.innerHTML = `
         <div class="form-group">
           ${variantCount === 1 ? '<label>Taille</label>' : ''}
-          <input type="text" value="${data?.size || ''}" placeholder="S, M, L, XL..." class="variant-size">
+          <input type="text" value="${data?.size || ''}" placeholder="S, M, L..." class="variant-size">
         </div>
         <div class="form-group">
-          ${variantCount === 1 ? '<label>Couleur (FR)</label>' : ''}
+          ${variantCount === 1 ? '<label>Couleur</label>' : ''}
           <input type="text" value="${data?.color_name_fr || ''}" placeholder="Bleu, Rouge..." class="variant-color-fr">
         </div>
         <div class="form-group">
@@ -341,10 +341,14 @@
           <input type="color" value="${data?.color_hex || '#000000'}" class="variant-color-hex" style="height:38px;">
         </div>
         <div class="form-group">
+          ${variantCount === 1 ? '<label>Prix (optionnel)</label>' : ''}
+          <input type="number" value="${data?.price_adjustment > 0 ? data.price_adjustment : ''}" min="0" step="50" placeholder="—" class="variant-price" title="Laisser vide pour utiliser le prix de base">
+        </div>
+        <div class="form-group">
           ${variantCount === 1 ? '<label>Stock</label>' : ''}
           <input type="number" value="${data?.stock_quantity || 0}" min="0" class="variant-stock">
         </div>
-        <button type="button" onclick="this.parentElement.remove()" style="height:38px;color:var(--color-danger);font-size:1.25rem;cursor:pointer;${variantCount === 1 ? 'margin-top:22px;' : ''}">&times;</button>
+        <button type="button" onclick="this.parentElement.remove()" style="height:38px;color:var(--color-danger);font-size:1.25rem;cursor:pointer;background:none;border:none;${variantCount === 1 ? 'margin-top:22px;' : ''}">&times;</button>
       `;
       container.appendChild(row);
     }
@@ -354,13 +358,19 @@
 
       const images = productImages.map((url, i) => ({ image_url: url, is_primary: i === 0, sort_order: i }));
 
-      const variants = Array.from(document.querySelectorAll('#variants-container > div')).map(row => ({
-        size: row.querySelector('.variant-size')?.value.trim() || '',
-        color_name_fr: row.querySelector('.variant-color-fr')?.value.trim() || '',
-        color_hex: row.querySelector('.variant-color-hex')?.value || '#000000',
-        stock_quantity: parseInt(row.querySelector('.variant-stock')?.value) || 0,
-        is_active: true,
-      })).filter(v => v.size || v.color_name_fr);
+      const variants = Array.from(document.querySelectorAll('#variants-container > div')).map(row => {
+        const priceRaw = row.querySelector('.variant-price')?.value.trim();
+        return {
+          size: row.querySelector('.variant-size')?.value.trim() || '',
+          color_name_fr: row.querySelector('.variant-color-fr')?.value.trim() || '',
+          color_hex: row.querySelector('.variant-color-hex')?.value || '#000000',
+          stock_quantity: parseInt(row.querySelector('.variant-stock')?.value) || 0,
+          // price_adjustment field doubles as an absolute override: >0 means
+          // this variant's final price; 0 means fall back to product base_price.
+          price_adjustment: priceRaw ? Math.max(0, parseFloat(priceRaw)) : 0,
+          is_active: true,
+        };
+      }).filter(v => v.size || v.color_name_fr);
 
       const productData = {
         name_fr: document.getElementById('name_fr').value,

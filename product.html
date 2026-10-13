@@ -281,10 +281,10 @@
           <span class="product-info-category">${i18n.field(p.category || DEMO_DATA?.categories?.find(c => c.id === p.category_id) || {}, 'name')}</span>
           <h1 class="product-info-name">${name}</h1>
 
-          <div class="product-info-price">
-            <span class="price-current">${i18n.formatPrice(p.sale_price || p.base_price)}</span>
+          <div class="product-info-price" id="price-container">
+            <span class="price-current" id="price-current">${i18n.formatPrice(p.sale_price || p.base_price)}</span>
             ${hasDiscount ? `
-              <span class="price-original">${i18n.formatPrice(p.base_price)}</span>
+              <span class="price-original" id="price-original">${i18n.formatPrice(p.base_price)}</span>
               <span class="discount-tag">-${discountPercent}%</span>
             ` : ''}
           </div>
@@ -362,12 +362,28 @@
       selectedSize = size;
       document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
+      refreshVariantPrice();
     }
 
     function selectColor(nameFr, nameAr, hex, el) {
       selectedColor = { name_fr: nameFr, name_ar: nameAr, hex };
       document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
       el.classList.add('selected');
+      refreshVariantPrice();
+    }
+
+    function refreshVariantPrice() {
+      if (!currentProduct) return;
+      const variants = currentProduct.variants || [];
+      const match = variants.find(v =>
+        (!selectedSize || v.size === selectedSize) &&
+        (!selectedColor || v.color_name_fr === selectedColor.name_fr)
+      );
+      const el = document.getElementById('price-current');
+      if (!el) return;
+      const basePrice = currentProduct.sale_price || currentProduct.base_price;
+      const price = (match && match.price_adjustment > 0) ? match.price_adjustment : basePrice;
+      el.textContent = i18n.formatPrice(price);
     }
 
     function changeQuantity(delta) {

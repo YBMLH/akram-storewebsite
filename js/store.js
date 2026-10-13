@@ -273,25 +273,69 @@ class DataStore {
 
   // ---- Admin: Product CRUD ----
 
+  // Split a product payload into (scalar columns, images[], variants[])
+  // so we can write each to its proper table. Keeps the admin API simple.
+  _splitProductPayload(payload) {
+    const { images = [], variants = [], ...scalars } = payload || {};
+    return { scalars, images, variants };
+  }
+
+  async _writeProductChildren(productId, images, variants) {
+    // Replace images: wipe existing then insert new (if any)
+    await this.supabase.from('product_images').delete().eq('product_id', productId);
+    if (images.length) {
+      const imgRows = images.map((im, i) => ({
+        product_id: productId,
+        image_url: im.image_url,
+        is_primary: im.is_primary ?? (i === 0),
+        sort_order: im.sort_order ?? i,
+        alt_text_fr: im.alt_text_fr || null,
+        alt_text_ar: im.alt_text_ar || null,
+      }));
+      const { error: imgErr } = await this.supabase.from('product_images').insert(imgRows);
+      if (imgErr) throw imgErr;
+    }
+
+    // Replace variants: wipe existing then insert new (if any)
+    await this.supabase.from('product_variants').delete().eq('product_id', productId);
+    if (variants.length) {
+      const varRows = variants.map(v => ({
+        product_id: productId,
+        size: v.size || null,
+        color_name_fr: v.color_name_fr || null,
+        color_name_ar: v.color_name_ar || null,
+        color_hex: v.color_hex || null,
+        stock_quantity: v.stock_quantity ?? 0,
+        price_adjustment: v.price_adjustment ?? 0, // used as absolute price override when > 0
+        sku: v.sku || null,
+        is_active: v.is_active !== false,
+      }));
+      const { error: varErr } = await this.supabase.from('product_variants').insert(varRows);
+      if (varErr) throw varErr;
+    }
+  }
+
   async createProduct(productData) {
     if (this.isDemo) {
       const p = {
         id: 'demo-' + Date.now(),
         views_count: 0,
         stock_quantity: 0,
-        images: [],
-        variants: [],
+        images: productData.images || [],
+        variants: productData.variants || [],
         ...productData,
       };
       DEMO_DATA.products.unshift(p);
       return p;
     }
+    const { scalars, images, variants } = this._splitProductPayload(productData);
     const { data, error } = await this.supabase
       .from('products')
-      .insert(productData)
+      .insert(scalars)
       .select()
       .single();
     if (error) throw error;
+    await this._writeProductChildren(data.id, images, variants);
     return data;
   }
 
@@ -301,13 +345,53 @@ class DataStore {
       if (idx >= 0) DEMO_DATA.products[idx] = { ...DEMO_DATA.products[idx], ...productData };
       return DEMO_DATA.products[idx];
     }
+    const { scalars, images, variants } = this._splitProductPayload(productData);
+    // If the caller passed images/variants arrays, replace children.
+    // If they didn't pass them at all (e.g. bulk status update), skip the replace.
+    const hasImagesChange = Array.isArray(productData.images);
+    const hasVariantsChange = Array.isArray(productData.variants);
+
     const { data, error } = await this.supabase
       .from('products')
-      .update(productData)
+      .update(scalars)
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
+
+    if (hasImagesChange || hasVariantsChange) {
+      // Only replace the children arrays that were actually sent
+      if (hasImagesChange) {
+        await this.supabase.from('product_images').delete().eq('product_id', id);
+        if (images.length) {
+          const imgRows = images.map((im, i) => ({
+            product_id: id,
+            image_url: im.image_url,
+            is_primary: im.is_primary ?? (i === 0),
+            sort_order: im.sort_order ?? i,
+          }));
+          const { error: e } = await this.supabase.from('product_images').insert(imgRows);
+          if (e) throw e;
+        }
+      }
+      if (hasVariantsChange) {
+        await this.supabase.from('product_variants').delete().eq('product_id', id);
+        if (variants.length) {
+          const varRows = variants.map(v => ({
+            product_id: id,
+            size: v.size || null,
+            color_name_fr: v.color_name_fr || null,
+            color_name_ar: v.color_name_ar || null,
+            color_hex: v.color_hex || null,
+            stock_quantity: v.stock_quantity ?? 0,
+            price_adjustment: v.price_adjustment ?? 0,
+            is_active: v.is_active !== false,
+          }));
+          const { error: e } = await this.supabase.from('product_variants').insert(varRows);
+          if (e) throw e;
+        }
+      }
+    }
     return data;
   }
 

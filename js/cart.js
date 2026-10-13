@@ -49,7 +49,11 @@ class Cart {
         color_ar: variant?.color_name_ar || null,
         color_hex: variant?.color_hex || null,
         quantity,
-        unit_price: product.sale_price || product.base_price,
+        // Per-variant price override: price_adjustment > 0 is treated as the
+        // absolute price for that variant; otherwise fall back to sale or base.
+        unit_price: (variant && variant.price_adjustment > 0)
+          ? variant.price_adjustment
+          : (product.sale_price || product.base_price),
         original_price: product.base_price,
         image_url: primaryImage?.image_url || '',
       });
