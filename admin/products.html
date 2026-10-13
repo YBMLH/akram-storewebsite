@@ -68,10 +68,26 @@
         <div class="admin-card">
           <div class="admin-card-header">
             <h2>Produits <span id="count-badge" style="color:var(--color-text-muted);font-weight:400;font-size:0.875rem;"></span></h2>
-            <div style="display:flex;gap:8px;">
-              <button id="bulk-delete-btn" class="btn btn-outline btn-sm" style="display:none;" onclick="bulkDelete()">Supprimer sélectionnés</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('csv-import').click()">⬆ Importer CSV</button>
+              <input type="file" id="csv-import" accept=".csv,text/csv" style="display:none;" onchange="importCSV(this.files[0])">
+              <button class="btn btn-outline btn-sm" onclick="exportProductsCSV()">⬇ Exporter CSV</button>
               <a href="product-edit.html" class="btn btn-primary btn-sm">+ Nouveau Produit</a>
             </div>
+          </div>
+
+          <!-- Bulk actions toolbar -->
+          <div id="bulk-bar" style="display:none;padding:12px 20px;background:var(--admin-primary);color:#fff;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span id="bulk-count" style="font-weight:600;"></span>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="bulkSetStatus('active')">Activer</button>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="bulkSetStatus('draft')">Brouillon</button>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="bulkSetStatus('archived')">Archiver</button>
+            <select id="bulk-cat-select" style="padding:5px 8px;border-radius:6px;border:none;font-size:0.8125rem;">
+              <option value="">— Changer catégorie —</option>
+            </select>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="bulkSetCategory()">Appliquer</button>
+            <button class="btn btn-sm" style="background:rgba(220,38,38,0.8);color:#fff;border:none;margin-inline-start:auto;" onclick="bulkDelete()">🗑 Supprimer</button>
+            <button class="btn btn-sm" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="clearSelection()">Annuler</button>
           </div>
           <div class="table-overflow">
             <table class="admin-table">
@@ -232,24 +248,208 @@
     }
 
     function updateBulkBtn() {
-      const btn = document.getElementById('bulk-delete-btn');
-      btn.style.display = selected.size > 0 ? 'inline-flex' : 'none';
-      btn.textContent = selected.size > 0 ? `Supprimer (${selected.size})` : 'Supprimer sélectionnés';
+      const bar = document.getElementById('bulk-bar');
+      const count = document.getElementById('bulk-count');
+      if (selected.size > 0) {
+        bar.style.display = 'flex';
+        count.textContent = `${selected.size} sélectionné${selected.size > 1 ? 's' : ''}`;
+      } else {
+        bar.style.display = 'none';
+      }
+      // populate category select if empty
+      const sel = document.getElementById('bulk-cat-select');
+      if (sel && sel.options.length <= 1) {
+        allCategories.forEach(c => {
+          const o = document.createElement('option');
+          o.value = c.id;
+          o.textContent = i18n.field(c, 'name');
+          sel.appendChild(o);
+        });
+      }
+    }
+
+    function clearSelection() {
+      selected.clear();
+      document.querySelectorAll('#products-table input[type="checkbox"]').forEach(cb => cb.checked = false);
+      document.getElementById('check-all').checked = false;
+      updateBulkBtn();
     }
 
     async function bulkDelete() {
       if (!selected.size) return;
       const ok = await confirmAction(`Supprimer ${selected.size} produit${selected.size > 1 ? 's' : ''} ?`, { confirmLabel: 'Supprimer', danger: true });
       if (!ok) return;
+      const toast = showToast('Suppression en cours…', 'loading', 0);
       try {
         for (const id of selected) await store.deleteProduct(id);
         selected.clear();
-        updateBulkBtn();
         allProducts = await store.getProducts({});
+        toast.remove();
+        showToast('Produits supprimés', 'success');
+        updateBulkBtn();
         applyFilters();
       } catch (e) {
+        toast.remove();
         showToast('Erreur: ' + (e.message || e), 'error', 5000);
       }
+    }
+
+    async function bulkSetStatus(status) {
+      if (!selected.size) return;
+      const toast = showToast('Mise à jour…', 'loading', 0);
+      try {
+        for (const id of selected) await store.updateProduct(id, { status });
+        allProducts = await store.getProducts({});
+        toast.remove();
+        showToast(`Statut mis à jour (${selected.size})`, 'success');
+        applyFilters();
+      } catch (e) {
+        toast.remove();
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
+      }
+    }
+
+    async function bulkSetCategory() {
+      const cat = document.getElementById('bulk-cat-select').value;
+      if (!cat || !selected.size) return;
+      const toast = showToast('Mise à jour…', 'loading', 0);
+      try {
+        for (const id of selected) await store.updateProduct(id, { category_id: cat });
+        allProducts = await store.getProducts({});
+        toast.remove();
+        showToast('Catégorie mise à jour', 'success');
+        applyFilters();
+      } catch (e) {
+        toast.remove();
+        showToast('Erreur: ' + (e.message || e), 'error', 5000);
+      }
+    }
+
+    // ---- CSV export/import ----
+    function exportProductsCSV() {
+      const rows = applyFiltersGetList();
+      if (!rows.length) { showToast('Aucun produit à exporter', 'info'); return; }
+      const header = ['name_fr', 'name_ar', 'slug', 'category', 'base_price', 'sale_price', 'stock_quantity', 'status', 'description_fr', 'description_ar', 'sku', 'is_featured', 'is_new_arrival', 'is_best_seller'];
+      const catMap = Object.fromEntries(allCategories.map(c => [c.id, c.name_fr || c.name_ar || c.slug]));
+      const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines = [header.map(esc).join(',')];
+      rows.forEach(p => lines.push([
+        p.name_fr, p.name_ar, p.slug, catMap[p.category_id] || '',
+        p.base_price, p.sale_price || '', p.stock_quantity ?? 0, p.status,
+        (p.description_fr || '').replace(/\r?\n/g, ' '),
+        (p.description_ar || '').replace(/\r?\n/g, ' '),
+        p.sku || '', p.is_featured ? 1 : 0, p.is_new_arrival ? 1 : 0, p.is_best_seller ? 1 : 0
+      ].map(esc).join(',')));
+      const csv = '﻿' + lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `produits-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function applyFiltersGetList() {
+      // Mirror the filtering used by applyFilters() but return the array
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const cat = document.getElementById('filter-cat').value;
+      const status = document.getElementById('filter-status').value;
+      return allProducts.filter(p => {
+        if (cat && p.category_id !== cat) return false;
+        if (status && p.status !== status) return false;
+        if (q) {
+          const hay = `${p.name_fr || ''} ${p.name_ar || ''} ${p.slug || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function parseCSV(text) {
+      // Minimal RFC4180 CSV parser (handles quoted fields with commas/newlines)
+      const rows = [];
+      let i = 0, field = '', row = [], inQuotes = false;
+      while (i < text.length) {
+        const c = text[i];
+        if (inQuotes) {
+          if (c === '"') {
+            if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+            inQuotes = false; i++; continue;
+          }
+          field += c; i++;
+        } else {
+          if (c === '"') { inQuotes = true; i++; }
+          else if (c === ',') { row.push(field); field = ''; i++; }
+          else if (c === '\n' || c === '\r') {
+            if (c === '\r' && text[i + 1] === '\n') i++;
+            row.push(field); rows.push(row); row = []; field = ''; i++;
+          } else { field += c; i++; }
+        }
+      }
+      if (field !== '' || row.length) { row.push(field); rows.push(row); }
+      return rows.filter(r => r.length && r.some(c => c.trim() !== ''));
+    }
+
+    async function importCSV(file) {
+      if (!file) return;
+      const text = await file.text();
+      const rows = parseCSV(text.replace(/^﻿/, ''));
+      if (rows.length < 2) { showToast('CSV vide ou invalide', 'error'); return; }
+      const header = rows[0].map(h => h.trim());
+      const idx = (name) => header.indexOf(name);
+      const need = ['name_fr', 'base_price'];
+      for (const col of need) {
+        if (idx(col) === -1) { showToast(`Colonne requise manquante: ${col}`, 'error', 5000); return; }
+      }
+      const ok = await confirmAction(`Importer ${rows.length - 1} produit(s) depuis ce fichier ?`, { confirmLabel: 'Importer' });
+      if (!ok) return;
+
+      const catByName = {};
+      allCategories.forEach(c => {
+        catByName[(c.name_fr || '').toLowerCase()] = c.id;
+        catByName[(c.name_ar || '').toLowerCase()] = c.id;
+        catByName[(c.slug || '').toLowerCase()] = c.id;
+      });
+
+      const toast = showToast(`Import 0 / ${rows.length - 1}…`, 'loading', 0);
+      let done = 0, errors = 0;
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        const get = (name) => (idx(name) >= 0 ? (row[idx(name)] || '').trim() : '');
+        const name_fr = get('name_fr');
+        if (!name_fr) { errors++; continue; }
+        const slug = get('slug') || name_fr.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now().toString(36).slice(-4);
+        const payload = {
+          name_fr,
+          name_ar: get('name_ar'),
+          slug,
+          category_id: catByName[get('category').toLowerCase()] || null,
+          base_price: parseFloat(get('base_price')) || 0,
+          sale_price: parseFloat(get('sale_price')) || null,
+          stock_quantity: parseInt(get('stock_quantity'), 10) || 0,
+          status: get('status') || 'draft',
+          description_fr: get('description_fr'),
+          description_ar: get('description_ar'),
+          sku: get('sku'),
+          is_featured: ['1', 'true', 'yes', 'oui'].includes(get('is_featured').toLowerCase()),
+          is_new_arrival: ['1', 'true', 'yes', 'oui'].includes(get('is_new_arrival').toLowerCase()),
+          is_best_seller: ['1', 'true', 'yes', 'oui'].includes(get('is_best_seller').toLowerCase()),
+        };
+        try {
+          await store.createProduct(payload);
+          done++;
+        } catch (e) {
+          console.error('Row', r, e);
+          errors++;
+        }
+        const span = toast.querySelector('span');
+        if (span) span.textContent = `Import ${done} / ${rows.length - 1}${errors ? ` (${errors} erreurs)` : ''}…`;
+      }
+      toast.remove();
+      showToast(`${done} importé${done > 1 ? 's' : ''}${errors ? `, ${errors} erreurs` : ''}`, errors ? 'error' : 'success', 5000);
+      allProducts = await store.getProducts({});
+      applyFilters();
     }
 
     async function duplicateProduct(id) {

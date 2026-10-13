@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mes Favoris — Collection By Ibtissam</title>
+  <meta name="description" content="Vos produits favoris chez Collection By Ibtissam.">
+  <meta name="theme-color" content="#1A1A1A">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main class="cart-page">
+    <div class="container">
+      <h1 class="cart-page-title">Mes Favoris</h1>
+      <div id="wishlist-content"></div>
+    </div>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/wishlist.js"></script>
+  <script src="js/whatsapp.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/inapp-helper.js" defer></script>
+  <script>
+    function renderWishlist() {
+      const items = wishlist.load();
+      const c = document.getElementById('wishlist-content');
+      if (!items.length) {
+        c.innerHTML = `
+          <div class="cart-empty">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <p>${i18n.currentLang === 'ar' ? 'لا توجد منتجات في المفضلة بعد.' : 'Votre liste de favoris est vide.'}</p>
+            <a href="index.html" class="btn btn-primary">${i18n.currentLang === 'ar' ? 'اكتشف المنتجات' : 'Découvrir les produits'}</a>
+          </div>
+        `;
+        return;
+      }
+      c.innerHTML = `
+        <div class="products-grid">
+          ${items.map(it => {
+            const name = i18n.currentLang === 'ar' ? (it.name_ar || it.name_fr) : (it.name_fr || it.name_ar);
+            const price = it.sale_price || it.base_price;
+            return `
+              <article class="product-card">
+                <a href="product.html?slug=${it.slug}" class="product-card-image">
+                  <img src="${it.image_url || 'https://placehold.co/400x500/f7f5f1/8c8c8c?text=—'}" alt="${name}" loading="lazy">
+                </a>
+                <div class="product-card-body">
+                  <a href="product.html?slug=${it.slug}" class="product-card-name">${name}</a>
+                  <div class="product-card-price">
+                    <span>${i18n.formatPrice(price)}</span>
+                    ${it.sale_price ? `<span style="text-decoration:line-through;color:var(--color-text-muted);font-size:0.875rem;margin-inline-start:6px;">${i18n.formatPrice(it.base_price)}</span>` : ''}
+                  </div>
+                  <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="wishlist.remove('${it.id}'); renderWishlist();">
+                    ${i18n.currentLang === 'ar' ? 'إزالة' : 'Retirer'}
+                  </button>
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderPage() {
+      renderHeader('');
+      renderFooter();
+      renderWhatsAppFAB();
+      renderWishlist();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPage);
+    document.addEventListener('wishlistUpdated', renderWishlist);
+  </script>
+</body>
+</html>

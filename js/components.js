@@ -33,6 +33,12 @@ function renderHeader(activePage = 'home') {
           <button class="header-lang" onclick="i18n.toggleLanguage(); renderPage();" aria-label="Toggle language">
             ${i18n.currentLang === 'ar' ? 'FR' : 'عربي'}
           </button>
+          <a href="wishlist.html" class="header-icon-btn" aria-label="Favoris" style="position:relative;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            ${(typeof wishlist !== 'undefined' && wishlist.count() > 0) ? `<span class="cart-badge" style="display:flex;">${wishlist.count()}</span>` : ''}
+          </a>
           <a href="cart.html" class="header-icon-btn cart-link" aria-label="Cart">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
@@ -165,6 +171,14 @@ function renderProductCard(product) {
     ? Math.round((1 - product.sale_price / product.base_price) * 100)
     : 0;
 
+  const wishActive = (typeof wishlist !== 'undefined' && wishlist.has(product.id)) ? 'active' : '';
+  const compact = encodeURIComponent(JSON.stringify({
+    id: product.id, slug: product.slug,
+    name_fr: product.name_fr, name_ar: product.name_ar,
+    base_price: product.base_price, sale_price: product.sale_price,
+    images: primaryImage ? [{ image_url: primaryImage.image_url, is_primary: true }] : [],
+  }));
+
   return `
     <a href="product.html?slug=${product.slug}" class="product-card">
       <div class="product-card-image">
@@ -172,6 +186,11 @@ function renderProductCard(product) {
         ${hasDiscount ? `<span class="product-badge sale">-${discountPercent}%</span>` : ''}
         ${product.is_new_arrival ? '<span class="product-badge new">' + i18n.t('nav.new') + '</span>' : ''}
         ${product.stock_quantity <= 0 ? '<span class="product-badge out">' + i18n.t('product.out_of_stock') + '</span>' : ''}
+        <button class="wishlist-heart ${wishActive}" aria-label="Favoris" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('${compact}', this);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
       </div>
       <div class="product-card-info">
         <h3 class="product-card-name">${name}</h3>

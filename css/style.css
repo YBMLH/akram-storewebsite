@@ -604,6 +604,28 @@ body.menu-open::after {
 .product-badge.new { inset-inline-end: 12px; }
 .product-badge.out { inset-inline-start: 12px; background: rgba(255,255,255,0.9); color: var(--color-text); }
 
+.wishlist-heart {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+  color: #999;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+.wishlist-heart:hover { color: #e11d48; background: #fff; }
+.wishlist-heart.active { color: #e11d48; }
+.wishlist-heart.active svg { fill: #e11d48; }
+
 .product-card-info {
   text-align: center;
   padding: 0 8px;
