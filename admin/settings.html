@@ -95,13 +95,17 @@
         <div class="admin-card" style="margin-top:16px;">
           <div class="admin-card-header">
             <h2>Frais de livraison par wilaya</h2>
-            <button type="button" class="btn btn-sm btn-outline" onclick="applyDefaultToEmpty()">Appliquer tarif par défaut aux vides</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="applyYalidinePreset('home')">Préréglage Yalidine (domicile)</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="applyYalidinePreset('stopdesk')">Yalidine (stop-desk)</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="applyDefaultToEmpty()">Appliquer défaut aux vides</button>
+            </div>
           </div>
           <div class="admin-card-body">
             <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--admin-border);">
               <div class="form-group" style="margin:0;max-width:220px;">
                 <label>Tarif par défaut (DA)</label>
-                <input type="number" id="shipping_default" min="0" step="50" placeholder="500">
+                <input type="number" id="shipping_default" min="0" step="50" placeholder="900">
               </div>
               <div class="form-group" style="margin:0;max-width:220px;">
                 <label>Seuil livraison gratuite (DA)</label>
@@ -221,6 +225,71 @@
           </div>
         `;
       }).join('');
+    }
+
+    // Yalidine Express e-commerce rates (home / stop-desk) in DA.
+    // Keys match WILAYAS names exactly. New wilayas (59-69) inherit
+    // the rate of the parent wilaya they were split from.
+    const YALIDINE = {
+      home: {
+        'Guelma': 590,
+        'Oum El Bouaghi': 700, 'Alger': 700, 'Skikda': 700, 'Annaba': 700,
+        'Constantine': 700, 'El Tarf': 700, 'Souk Ahras': 700,
+        'Chlef': 900, 'Batna': 900, 'Béjaïa': 900, 'Blida': 900, 'Bouira': 900,
+        'Tébessa': 900, 'Tlemcen': 900, 'Tiaret': 900, 'Tizi Ouzou': 900,
+        'Jijel': 900, 'Sétif': 900, 'Saïda': 900, 'Sidi Bel Abbès': 900,
+        'Médéa': 900, 'Mostaganem': 900, "M'Sila": 900, 'Mascara': 900,
+        'Oran': 900, 'Bordj Bou Arréridj': 900, 'Boumerdès': 900,
+        'Tissemsilt': 900, 'Khenchela': 900, 'Tipaza': 900, 'Mila': 900,
+        'Aïn Defla': 900, 'Aïn Témouchent': 900, 'Relizane': 900,
+        'Laghouat': 950, 'Biskra': 950, 'Djelfa': 950, 'Ouargla': 950,
+        'El Oued': 950, 'Ghardaïa': 950, 'Ouled Djellal': 950,
+        'Touggourt': 950, "El M'Ghair": 950, 'El Meniaa': 950,
+        'Adrar': 1050, 'Béchar': 1050, 'El Bayadh': 1050, 'Naâma': 1050,
+        'Timimoun': 1050, 'Bordj Badji Mokhtar': 1050, 'Béni Abbès': 1050,
+        'Tamanrasset': 1600, 'Illizi': 1600, 'Tindouf': 1600,
+        'In Salah': 1600, 'In Guezzam': 1600, 'Djanet': 1600,
+        // New wilayas 59-69 (inherit parent rate)
+        'Aflou': 950, 'Barika': 900, 'El Kantara': 950, 'Bir El Ater': 900,
+        'El Aricha': 900, 'Ksar Chellala': 900, 'Aïn Oussera': 950,
+        'Messaad': 950, 'Ksar El Boukhari': 900, 'Bou Saâda': 900,
+        'El Abiodh Sidi Cheikh': 1050,
+      },
+      stopdesk: {
+        'Guelma': 450,
+        'Oum El Bouaghi': 550, 'Alger': 550, 'Skikda': 550, 'Annaba': 550,
+        'Constantine': 550, 'El Tarf': 550, 'Souk Ahras': 550,
+        'Chlef': 650, 'Batna': 650, 'Béjaïa': 650, 'Blida': 650, 'Bouira': 650,
+        'Tébessa': 650, 'Tlemcen': 650, 'Tiaret': 650, 'Tizi Ouzou': 650,
+        'Jijel': 650, 'Sétif': 650, 'Saïda': 650, 'Sidi Bel Abbès': 650,
+        'Médéa': 650, 'Mostaganem': 650, "M'Sila": 650, 'Mascara': 650,
+        'Oran': 650, 'Bordj Bou Arréridj': 650, 'Boumerdès': 650,
+        'Tissemsilt': 650, 'Khenchela': 650, 'Tipaza': 650, 'Mila': 650,
+        'Aïn Defla': 650, 'Aïn Témouchent': 650, 'Relizane': 650,
+        'Laghouat': 750, 'Biskra': 750, 'Djelfa': 750, 'Ouargla': 750,
+        'El Oued': 750, 'Ghardaïa': 750, 'Ouled Djellal': 750,
+        'Touggourt': 750, "El M'Ghair": 750, 'El Meniaa': 750,
+        'Adrar': 850, 'Béchar': 850, 'El Bayadh': 850, 'Naâma': 850,
+        'Timimoun': 850, 'Bordj Badji Mokhtar': 850, 'Béni Abbès': 850,
+        'Tamanrasset': 1400, 'Illizi': 1400, 'Tindouf': 1400,
+        'In Salah': 1400, 'In Guezzam': 1400, 'Djanet': 1400,
+        'Aflou': 750, 'Barika': 650, 'El Kantara': 750, 'Bir El Ater': 650,
+        'El Aricha': 650, 'Ksar Chellala': 650, 'Aïn Oussera': 750,
+        'Messaad': 750, 'Ksar El Boukhari': 650, 'Bou Saâda': 650,
+        'El Abiodh Sidi Cheikh': 850,
+      },
+    };
+
+    function applyYalidinePreset(mode) {
+      const prices = YALIDINE[mode] || YALIDINE.home;
+      // Fill the default to the most common zone (zone 2 = 900 home / 650 stopdesk)
+      const def = mode === 'stopdesk' ? 650 : 900;
+      document.getElementById('shipping_default').value = def;
+      document.querySelectorAll('#shipping-grid input[data-wilaya]').forEach(el => {
+        const w = el.dataset.wilaya;
+        if (prices[w] != null) el.value = prices[w];
+      });
+      showToast(`Préréglage Yalidine (${mode === 'stopdesk' ? 'stop-desk' : 'domicile'}) chargé. N'oubliez pas d'enregistrer.`, 'info', 4000);
     }
 
     function applyDefaultToEmpty() {
