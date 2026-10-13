@@ -11,13 +11,13 @@ const STORE_CONFIG = {
   },
 
   // WhatsApp number for orders (international format, no + sign)
-  whatsappNumber: '213550000000',
+  whatsappNumber: '213676779040',
 
   // Store information
   store: {
     name: { ar: 'مجموعة إبتسام', fr: 'Collection By Ibtissam' },
     shortName: { ar: 'CBI', fr: 'CBI' },
-    phone: '0550000000',
+    phone: '0676779040',
     address: { ar: 'الجزائر', fr: 'Algérie' },
     currency: 'DA',
     instagram: '',
