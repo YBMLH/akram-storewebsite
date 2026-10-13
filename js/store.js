@@ -248,6 +248,29 @@ class DataStore {
     return data;
   }
 
+  async updateOrderNotes(orderId, notes) {
+    if (this.isDemo) {
+      const o = DEMO_DATA.orders.find(x => x.id === orderId);
+      if (o) o.notes = notes;
+      return o;
+    }
+    const { data, error } = await this.supabase
+      .from('orders').update({ notes }).eq('id', orderId).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteOrder(orderId) {
+    if (this.isDemo) {
+      const i = DEMO_DATA.orders.findIndex(x => x.id === orderId);
+      if (i >= 0) DEMO_DATA.orders.splice(i, 1);
+      return true;
+    }
+    const { error } = await this.supabase.from('orders').delete().eq('id', orderId);
+    if (error) throw error;
+    return true;
+  }
+
   // ---- Admin: Product CRUD ----
 
   async createProduct(productData) {

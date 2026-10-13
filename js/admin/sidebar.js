@@ -301,3 +301,45 @@ function getStatusLabel(status) {
   const s = ORDER_STATUSES[status] || { ar: status, fr: status, class: '' };
   return `<span class="status-badge ${s.class}">${i18n.currentLang === 'ar' ? s.ar : s.fr}</span>`;
 }
+
+// Pre-written WhatsApp templates keyed by order status.
+// `order` is the full order object; returns { fr, ar } messages.
+function waTemplate(key, order) {
+  const name = order.customer_name;
+  const num = order.order_number;
+  const total = new Intl.NumberFormat('fr-DZ').format(order.total_amount) + ' DA';
+  const T = {
+    contacted: {
+      fr: `Bonjour ${name}, je vous contacte au sujet de votre commande #${num} chez Collection By Ibtissam. Pouvez-vous confirmer votre adresse de livraison s'il vous plaît ?`,
+      ar: `مرحباً ${name}، أتواصل معك بخصوص طلبك رقم ${num} من مجموعة إبتسام. هل يمكنك تأكيد عنوان التوصيل من فضلك؟`,
+    },
+    confirmed: {
+      fr: `Bonjour ${name}, votre commande #${num} (${total}) est confirmée. Nous préparons votre colis. Merci pour votre confiance 🤍`,
+      ar: `مرحباً ${name}، تم تأكيد طلبك رقم ${num} (${total}). نقوم بتحضير طلبك. شكراً لثقتك 🤍`,
+    },
+    shipped: {
+      fr: `Bonjour ${name}, votre commande #${num} est en route 📦. Vous serez contacté(e) par le livreur sous 24-48h.`,
+      ar: `مرحباً ${name}، طلبك رقم ${num} في الطريق 📦. سيتواصل معك شركة التوصيل خلال 24-48 ساعة.`,
+    },
+    delivered: {
+      fr: `Bonjour ${name}, j'espère que vous avez bien reçu votre commande #${num} et qu'elle vous plaît ! Un avis fait toujours plaisir 🤍`,
+      ar: `مرحباً ${name}، أتمنى أن تكوني قد استلمتِ طلبك رقم ${num} وأن يعجبك! رأيك يسعدنا 🤍`,
+    },
+    cancelled: {
+      fr: `Bonjour ${name}, votre commande #${num} a été annulée. Si c'est une erreur, répondez à ce message et nous la rétablirons.`,
+      ar: `مرحباً ${name}، تم إلغاء طلبك رقم ${num}. إذا كان ذلك خطأ، يرجى الرد لإعادته.`,
+    },
+    custom: {
+      fr: `Bonjour ${name}, concernant votre commande #${num}...`,
+      ar: `مرحباً ${name}، بخصوص طلبك رقم ${num}...`,
+    },
+  };
+  return T[key] || T.custom;
+}
+
+function sendOrderWhatsApp(order, templateKey = 'custom') {
+  const t = waTemplate(templateKey, order);
+  const msg = i18n.currentLang === 'ar' ? t.ar : t.fr;
+  const intPhone = (order.customer_phone || '').replace(/^0/, '213');
+  openWhatsApp(intPhone, encodeURIComponent(msg));
+}
