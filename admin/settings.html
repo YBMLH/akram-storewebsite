@@ -348,9 +348,11 @@
         status.textContent = '✓ ' + i18n.t('admin.saved');
         setTimeout(() => { status.textContent = ''; }, 3000);
       } catch (err) {
-        console.error(err);
+        console.error('[settings] save failed:', err);
         status.style.color = 'var(--color-danger)';
-        status.textContent = 'Erreur';
+        const msg = err?.message || err?.error_description || err?.hint || String(err);
+        status.textContent = 'Erreur: ' + msg;
+        if (typeof showToast === 'function') showToast('Erreur: ' + msg, 'error', 8000);
       }
     }
 
