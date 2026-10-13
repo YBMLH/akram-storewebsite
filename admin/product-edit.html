@@ -157,13 +157,43 @@
                 </div>
               </details>
 
-              <!-- Variants -->
-              <div class="form-group">
-                <label>Variantes (Tailles & Couleurs)</label>
-                <div id="variants-container"></div>
-                <button type="button" class="btn btn-outline btn-sm" onclick="addVariantRow()" style="margin-top: 8px;">
-                  + Ajouter une variante
-                </button>
+              <!-- Variants: pick sizes + pick colors, grid auto-generates -->
+              <div class="form-group" style="border:1px solid var(--admin-border);padding:16px;border-radius:8px;">
+                <label style="font-weight:600;margin-bottom:12px;display:block;">Tailles & Couleurs</label>
+
+                <!-- Sizes -->
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);margin-bottom:8px;">Tailles disponibles</div>
+                  <div id="size-checks" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <input type="text" id="custom-size-input" placeholder="Ajouter (ex: 42, 44)" style="flex:1;max-width:200px;padding:6px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addCustomSize()">+ Ajouter</button>
+                  </div>
+                </div>
+
+                <!-- Colors -->
+                <div style="margin-bottom:16px;padding-top:16px;border-top:1px solid var(--admin-border);">
+                  <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);margin-bottom:8px;">Couleurs disponibles</div>
+                  <div id="color-list" style="display:flex;gap:6px;flex-direction:column;margin-bottom:8px;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="addColorRow()">+ Ajouter une couleur</button>
+                </div>
+
+                <!-- Auto-generated stock & price grid -->
+                <div id="combo-section" style="padding-top:16px;border-top:1px solid var(--admin-border);display:none;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);">Stock & prix par variante</div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="applyBulkStock()">Appliquer stock à toutes</button>
+                  </div>
+                  <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <input type="number" id="bulk-stock-input" min="0" placeholder="Stock" style="width:120px;padding:6px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+                    <input type="number" id="bulk-price-input" min="0" step="50" placeholder="Prix (optionnel)" style="width:160px;padding:6px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="applyBulkPrice()">Appliquer prix</button>
+                  </div>
+                  <div id="combo-grid" style="overflow-x:auto;"></div>
+                </div>
+                <div id="combo-empty" style="padding:12px;color:var(--color-text-muted);font-size:0.8125rem;">
+                  Cochez des tailles et/ou ajoutez des couleurs pour générer les variantes.
+                </div>
               </div>
 
               <div class="admin-form-actions">
@@ -213,7 +243,9 @@
         await loadExistingProduct(id);
       } else {
         renderAdminTopbar(i18n.currentLang === 'ar' ? 'إضافة منتج جديد' : 'Ajouter un Produit');
-        addVariantRow(); // Start with one empty variant
+        renderSizeChecks();
+        renderColorList();
+        renderCombos();
       }
 
       // Auto-generate slug from French name
@@ -297,11 +329,7 @@
       if (seoAr) seoAr.value = p.seo_description_ar || '';
 
       // Variants
-      if (p.variants && p.variants.length > 0) {
-        p.variants.forEach(v => addVariantRow(v));
-      } else {
-        addVariantRow();
-      }
+      hydrateVariants(p.variants || []);
     }
 
     function renderImagePreviews() {
@@ -322,35 +350,213 @@
       if (manual && document.activeElement !== manual) manual.value = productImages.join('\n');
     }
 
-    function addVariantRow(data = null) {
-      variantCount++;
-      const container = document.getElementById('variants-container');
-      const row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:90px 1fr 60px 100px 80px 36px;gap:8px;align-items:end;margin-bottom:8px;';
-      row.innerHTML = `
-        <div class="form-group">
-          ${variantCount === 1 ? '<label>Taille</label>' : ''}
-          <input type="text" value="${data?.size || ''}" placeholder="S, M, L..." class="variant-size">
+    // ---- Variant system: sizes checkbox + colors list + auto-grid ----
+    const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    let selectedSizes = new Set();     // Set of size strings
+    let colors = [];                   // [{ name_fr, hex }]
+    let combos = {};                   // { "size||color_name_fr": { stock, price } }
+
+    function keyFor(size, color) {
+      return `${size || ''}||${color || ''}`;
+    }
+
+    function renderSizeChecks() {
+      // Collect every size that should appear: defaults + any custom ones already picked
+      const all = new Set([...DEFAULT_SIZES, ...selectedSizes]);
+      const container = document.getElementById('size-checks');
+      container.innerHTML = Array.from(all).map(s => {
+        const checked = selectedSizes.has(s);
+        const isCustom = !DEFAULT_SIZES.includes(s);
+        return `
+          <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid ${checked ? 'var(--admin-primary)' : 'var(--admin-border)'};border-radius:999px;cursor:pointer;background:${checked ? 'var(--admin-primary)' : 'var(--admin-surface)'};color:${checked ? '#fff' : 'var(--admin-text)'};font-size:0.8125rem;">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSize('${s.replace(/'/g, "\\'")}', this.checked)" style="display:none;">
+            ${s}${isCustom ? ` <span onclick="event.preventDefault(); removeCustomSize('${s.replace(/'/g, "\\'")}')" style="margin-inline-start:4px;opacity:0.7;cursor:pointer;">×</span>` : ''}
+          </label>
+        `;
+      }).join('');
+    }
+
+    function toggleSize(size, checked) {
+      if (checked) selectedSizes.add(size);
+      else selectedSizes.delete(size);
+      renderSizeChecks();
+      renderCombos();
+    }
+
+    function addCustomSize() {
+      const input = document.getElementById('custom-size-input');
+      const val = input.value.trim();
+      if (!val) return;
+      selectedSizes.add(val);
+      input.value = '';
+      renderSizeChecks();
+      renderCombos();
+    }
+
+    function removeCustomSize(size) {
+      selectedSizes.delete(size);
+      renderSizeChecks();
+      renderCombos();
+    }
+
+    function renderColorList() {
+      const container = document.getElementById('color-list');
+      if (!colors.length) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = colors.map((c, i) => `
+        <div style="display:flex;gap:8px;align-items:center;padding:6px 10px;background:var(--admin-bg);border-radius:6px;">
+          <input type="color" value="${c.hex}" onchange="colors[${i}].hex=this.value; renderCombos();" style="height:34px;width:50px;border:1px solid var(--admin-border);border-radius:4px;padding:2px;">
+          <input type="text" value="${c.name_fr}" placeholder="Nom (ex: Bleu nuit)" oninput="colors[${i}].name_fr=this.value; renderCombos();" style="flex:1;padding:6px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+          <button type="button" onclick="colors.splice(${i}, 1); renderColorList(); renderCombos();" style="background:transparent;border:none;color:var(--color-danger);font-size:1.25rem;cursor:pointer;padding:0 6px;">×</button>
         </div>
-        <div class="form-group">
-          ${variantCount === 1 ? '<label>Couleur</label>' : ''}
-          <input type="text" value="${data?.color_name_fr || ''}" placeholder="Bleu, Rouge..." class="variant-color-fr">
-        </div>
-        <div class="form-group">
-          ${variantCount === 1 ? '<label>Hex</label>' : ''}
-          <input type="color" value="${data?.color_hex || '#000000'}" class="variant-color-hex" style="height:38px;">
-        </div>
-        <div class="form-group">
-          ${variantCount === 1 ? '<label>Prix (optionnel)</label>' : ''}
-          <input type="number" value="${data?.price_adjustment > 0 ? data.price_adjustment : ''}" min="0" step="50" placeholder="—" class="variant-price" title="Laisser vide pour utiliser le prix de base">
-        </div>
-        <div class="form-group">
-          ${variantCount === 1 ? '<label>Stock</label>' : ''}
-          <input type="number" value="${data?.stock_quantity || 0}" min="0" class="variant-stock">
-        </div>
-        <button type="button" onclick="this.parentElement.remove()" style="height:38px;color:var(--color-danger);font-size:1.25rem;cursor:pointer;background:none;border:none;${variantCount === 1 ? 'margin-top:22px;' : ''}">&times;</button>
+      `).join('');
+    }
+
+    function addColorRow(data) {
+      colors.push(data || { name_fr: '', hex: '#000000' });
+      renderColorList();
+      renderCombos();
+    }
+
+    function renderCombos() {
+      const sizes = Array.from(selectedSizes);
+      const cols = colors.filter(c => c.name_fr.trim());
+      const empty = document.getElementById('combo-empty');
+      const section = document.getElementById('combo-section');
+      const grid = document.getElementById('combo-grid');
+
+      if (!sizes.length && !cols.length) {
+        empty.style.display = 'block';
+        section.style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      section.style.display = 'block';
+
+      // Build the combination list
+      const rows = [];
+      if (sizes.length && cols.length) {
+        sizes.forEach(s => cols.forEach(c => rows.push({ size: s, color: c.name_fr, hex: c.hex })));
+      } else if (sizes.length) {
+        sizes.forEach(s => rows.push({ size: s, color: '', hex: '' }));
+      } else {
+        cols.forEach(c => rows.push({ size: '', color: c.name_fr, hex: c.hex }));
+      }
+
+      grid.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:0.8125rem;">
+          <thead>
+            <tr style="background:var(--admin-bg);">
+              ${sizes.length ? '<th style="text-align:start;padding:8px 10px;font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);">Taille</th>' : ''}
+              ${cols.length ? '<th style="text-align:start;padding:8px 10px;font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);">Couleur</th>' : ''}
+              <th style="text-align:start;padding:8px 10px;font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);width:120px;">Stock</th>
+              <th style="text-align:start;padding:8px 10px;font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-muted);width:160px;">Prix (optionnel)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const k = keyFor(r.size, r.color);
+              const prev = combos[k] || {};
+              return `
+                <tr>
+                  ${sizes.length ? `<td style="padding:6px 10px;border-top:1px solid var(--admin-border);font-weight:500;">${r.size || '—'}</td>` : ''}
+                  ${cols.length ? `<td style="padding:6px 10px;border-top:1px solid var(--admin-border);"><span style="display:inline-block;width:14px;height:14px;background:${r.hex || '#ccc'};border-radius:50%;vertical-align:middle;border:1px solid rgba(0,0,0,0.1);margin-inline-end:6px;"></span>${r.color || '—'}</td>` : ''}
+                  <td style="padding:6px 10px;border-top:1px solid var(--admin-border);">
+                    <input type="number" min="0" value="${prev.stock ?? 0}" data-combo="${k}" data-field="stock"
+                      style="width:100%;padding:5px 8px;border:1px solid var(--admin-border);border-radius:4px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+                  </td>
+                  <td style="padding:6px 10px;border-top:1px solid var(--admin-border);">
+                    <input type="number" min="0" step="50" value="${prev.price > 0 ? prev.price : ''}" placeholder="—" data-combo="${k}" data-field="price"
+                      style="width:100%;padding:5px 8px;border:1px solid var(--admin-border);border-radius:4px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
       `;
-      container.appendChild(row);
+
+      // Wire inputs → combos object
+      grid.querySelectorAll('input[data-combo]').forEach(el => {
+        el.addEventListener('input', () => {
+          const k = el.dataset.combo;
+          if (!combos[k]) combos[k] = { stock: 0, price: 0 };
+          const num = parseFloat(el.value) || 0;
+          combos[k][el.dataset.field] = Math.max(0, num);
+        });
+      });
+    }
+
+    function applyBulkStock() {
+      const v = parseInt(document.getElementById('bulk-stock-input').value, 10);
+      if (isNaN(v) || v < 0) return;
+      document.querySelectorAll('#combo-grid input[data-field="stock"]').forEach(el => {
+        el.value = v;
+        const k = el.dataset.combo;
+        if (!combos[k]) combos[k] = { stock: 0, price: 0 };
+        combos[k].stock = v;
+      });
+    }
+
+    function applyBulkPrice() {
+      const v = parseFloat(document.getElementById('bulk-price-input').value);
+      if (isNaN(v) || v < 0) return;
+      document.querySelectorAll('#combo-grid input[data-field="price"]').forEach(el => {
+        el.value = v || '';
+        const k = el.dataset.combo;
+        if (!combos[k]) combos[k] = { stock: 0, price: 0 };
+        combos[k].price = v;
+      });
+    }
+
+    // Load existing variants into the new UI when editing a product
+    function hydrateVariants(variants) {
+      selectedSizes = new Set();
+      colors = [];
+      combos = {};
+      const seenColors = new Set();
+      variants.forEach(v => {
+        if (v.size) selectedSizes.add(v.size);
+        if (v.color_name_fr && !seenColors.has(v.color_name_fr)) {
+          seenColors.add(v.color_name_fr);
+          colors.push({ name_fr: v.color_name_fr, hex: v.color_hex || '#000000' });
+        }
+        combos[keyFor(v.size, v.color_name_fr)] = {
+          stock: v.stock_quantity || 0,
+          price: v.price_adjustment > 0 ? v.price_adjustment : 0,
+        };
+      });
+      renderSizeChecks();
+      renderColorList();
+      renderCombos();
+    }
+
+    function collectVariants() {
+      const sizes = Array.from(selectedSizes);
+      const cols = colors.filter(c => c.name_fr.trim());
+      const out = [];
+      const push = (size, color, hex) => {
+        const k = keyFor(size, color);
+        const c = combos[k] || { stock: 0, price: 0 };
+        out.push({
+          size: size || '',
+          color_name_fr: color || '',
+          color_hex: hex || '#000000',
+          stock_quantity: c.stock || 0,
+          price_adjustment: c.price > 0 ? c.price : 0,
+          is_active: true,
+        });
+      };
+      if (sizes.length && cols.length) {
+        sizes.forEach(s => cols.forEach(c => push(s, c.name_fr, c.hex)));
+      } else if (sizes.length) {
+        sizes.forEach(s => push(s, '', ''));
+      } else if (cols.length) {
+        cols.forEach(c => push('', c.name_fr, c.hex));
+      }
+      return out.filter(v => v.size || v.color_name_fr);
     }
 
     async function saveProduct(e) {
@@ -358,19 +564,7 @@
 
       const images = productImages.map((url, i) => ({ image_url: url, is_primary: i === 0, sort_order: i }));
 
-      const variants = Array.from(document.querySelectorAll('#variants-container > div')).map(row => {
-        const priceRaw = row.querySelector('.variant-price')?.value.trim();
-        return {
-          size: row.querySelector('.variant-size')?.value.trim() || '',
-          color_name_fr: row.querySelector('.variant-color-fr')?.value.trim() || '',
-          color_hex: row.querySelector('.variant-color-hex')?.value || '#000000',
-          stock_quantity: parseInt(row.querySelector('.variant-stock')?.value) || 0,
-          // price_adjustment field doubles as an absolute override: >0 means
-          // this variant's final price; 0 means fall back to product base_price.
-          price_adjustment: priceRaw ? Math.max(0, parseFloat(priceRaw)) : 0,
-          is_active: true,
-        };
-      }).filter(v => v.size || v.color_name_fr);
+      const variants = collectVariants();
 
       const productData = {
         name_fr: document.getElementById('name_fr').value,
