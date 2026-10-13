@@ -464,13 +464,31 @@ class DataStore {
       });
     }
 
-    const safeName = (file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
-    const ext = safeName.includes('.') ? safeName.split('.').pop() : 'jpg';
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    // Downscale + re-encode as WebP (max 1600px long edge) before upload.
+    // Keeps the original for non-raster types (SVG, GIF).
+    let toUpload = file;
+    let finalExt = (file.name || '').split('.').pop() || 'jpg';
+    let finalType = file.type;
+    const skipResize = /svg|gif/i.test(file.type);
+    if (!skipResize) {
+      try {
+        const resized = await resizeImage(file, 1600, 0.82);
+        if (resized) {
+          toUpload = resized;
+          finalExt = 'webp';
+          finalType = 'image/webp';
+        }
+      } catch (e) {
+        console.warn('[store] image resize failed, uploading original:', e);
+      }
+    }
+
+    const safeName = ((file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_'));
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${finalExt}`;
 
     const { error: upErr } = await this.supabase.storage
       .from('media')
-      .upload(path, file, { cacheControl: '31536000', contentType: file.type });
+      .upload(path, toUpload, { cacheControl: '31536000', contentType: finalType });
     if (upErr) throw upErr;
 
     const { data: urlData } = this.supabase.storage.from('media').getPublicUrl(path);
@@ -634,6 +652,39 @@ class DataStore {
       topProducts: products,
     };
   }
+}
+
+// Downscale a File/Blob to a max edge (long side) and encode as WebP.
+// Returns a Blob or null if resize wasn't possible.
+async function resizeImage(file, maxEdge = 1600, quality = 0.82) {
+  if (!window.createImageBitmap && !window.Image) return null;
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = URL.createObjectURL(file);
+  });
+
+  let { naturalWidth: w, naturalHeight: h } = img;
+  if (!w || !h) { URL.revokeObjectURL(img.src); return null; }
+
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const outW = Math.round(w * scale);
+  const outH = Math.round(h * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, outW, outH);
+  URL.revokeObjectURL(img.src);
+
+  // Prefer WebP; fall back to JPEG if WebP encoder is unavailable.
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/webp', quality));
+  if (blob && blob.size > 0) return blob;
+  return await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
 }
 
 // Global store instance

@@ -19,6 +19,7 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -132,6 +133,17 @@
         <div class="products-grid" id="best-products"></div>
       </div>
     </section>
+
+    <!-- Instagram Feed -->
+    <section class="section" id="instagram-section" style="display:none;">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Instagram</h2>
+          <a href="#" id="instagram-link" class="section-link" target="_blank" rel="noopener">@...</a>
+        </div>
+        <div id="instagram-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:8px;"></div>
+      </div>
+    </section>
   </main>
 
   <footer id="site-footer"></footer>
@@ -232,6 +244,29 @@
       }
     }
 
+    async function renderInstagramFeed() {
+      try {
+        const [handle, posts] = await Promise.all([
+          store.getSetting('instagram_handle'),
+          store.getSetting('instagram_posts'),
+        ]);
+        const url = await store.getSetting('instagram');
+        if (!posts || !posts.length) return;
+        const section = document.getElementById('instagram-section');
+        const grid = document.getElementById('instagram-grid');
+        const link = document.getElementById('instagram-link');
+        const h = handle || (url ? url.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') : '');
+        if (h) link.textContent = '@' + h;
+        if (url) link.href = url;
+        grid.innerHTML = posts.slice(0, 8).map(p => `
+          <a href="${p.link || url || '#'}" target="_blank" rel="noopener" style="aspect-ratio:1;display:block;overflow:hidden;background:#f0f0f0;position:relative;">
+            <img src="${p.image_url}" alt="Instagram" loading="lazy" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          </a>
+        `).join('');
+        section.style.display = 'block';
+      } catch (e) { console.warn('Instagram feed:', e); }
+    }
+
     async function renderPage() {
       renderHeader('home');
       renderFooter();
@@ -242,6 +277,7 @@
         renderProductSection('featured-products', { is_featured: true }),
         renderProductSection('new-products', { is_new_arrival: true }),
         renderProductSection('best-products', { is_best_seller: true }),
+        renderInstagramFeed(),
       ]);
       i18n.translatePage();
     }

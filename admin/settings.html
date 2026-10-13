@@ -119,6 +119,23 @@
 
         <div class="admin-card" style="margin-top:16px;">
           <div class="admin-card-header">
+            <h2>Section Instagram (page d'accueil)</h2>
+            <button type="button" class="btn btn-sm btn-outline" onclick="addInstagramPost()">+ Ajouter une publication</button>
+          </div>
+          <div class="admin-card-body">
+            <p style="color:var(--color-text-muted);font-size:0.8125rem;margin:0 0 12px;">
+              Ajoutez jusqu'à 8 images Instagram (uploadées ici) qui apparaîtront sur la page d'accueil. Chaque image peut lier vers la publication Instagram correspondante.
+            </p>
+            <div id="instagram-posts-list" style="display:grid;gap:10px;"></div>
+            <div style="margin-top:12px;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="saveInstagramPosts()">Enregistrer publications</button>
+              <span id="ig-status" style="margin-left:8px;color:var(--color-success);font-size:0.8125rem;"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-card" style="margin-top:16px;">
+          <div class="admin-card-header">
             <h2>Backend & Persistance</h2>
           </div>
           <div class="admin-card-body">
@@ -178,6 +195,7 @@
       }
 
       await loadShipping();
+      await loadInstagramPosts();
     }
 
     let shippingConfig = { default: 0, free_threshold: 0, byWilaya: {} };
@@ -211,6 +229,58 @@
       document.querySelectorAll('#shipping-grid input[data-wilaya]').forEach(el => {
         if (el.value.trim() === '') el.value = def;
       });
+    }
+
+    // ---- Instagram posts management ----
+    let instagramPosts = [];
+
+    async function loadInstagramPosts() {
+      const p = await store.getSetting('instagram_posts');
+      instagramPosts = Array.isArray(p) ? p : [];
+      renderInstagramList();
+    }
+
+    function renderInstagramList() {
+      const container = document.getElementById('instagram-posts-list');
+      if (!instagramPosts.length) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-muted);font-size:0.875rem;">Aucune publication.</div>';
+        return;
+      }
+      container.innerHTML = instagramPosts.map((p, i) => `
+        <div style="display:flex;gap:12px;align-items:center;padding:10px;background:var(--admin-bg);border-radius:8px;">
+          <img src="${p.image_url}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;background:#e5e5e5;">
+          <input type="url" value="${p.link || ''}" placeholder="Lien vers la publication (optionnel)" onchange="instagramPosts[${i}].link=this.value" style="flex:1;padding:7px 10px;border:1px solid var(--admin-border);border-radius:6px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);">
+          <button type="button" class="btn btn-sm" style="color:var(--color-danger);border:1px solid var(--color-danger);background:transparent;" onclick="instagramPosts.splice(${i},1); renderInstagramList();">×</button>
+        </div>
+      `).join('');
+    }
+
+    function addInstagramPost() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+        const url = await uploadImageWithToast(file, 'instagram');
+        if (url) {
+          instagramPosts.push({ image_url: url, link: '' });
+          renderInstagramList();
+        }
+      };
+      input.click();
+    }
+
+    async function saveInstagramPosts() {
+      const status = document.getElementById('ig-status');
+      try {
+        await store.setSetting('instagram_posts', instagramPosts);
+        status.textContent = '✓ Enregistré';
+        setTimeout(() => { status.textContent = ''; }, 2500);
+      } catch (e) {
+        status.style.color = 'var(--color-danger)';
+        status.textContent = 'Erreur: ' + (e.message || e);
+      }
     }
 
     async function saveShipping() {
