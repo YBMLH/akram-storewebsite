@@ -193,7 +193,7 @@
       const msg = i18n.currentLang === 'ar'
         ? `مرحباً ${name}، شكراً لك على ثقتك في مجموعة إبتسام !`
         : `Bonjour ${name}, merci pour votre fidélité chez Collection By Ibtissam !`;
-      window.open(`https://wa.me/${intPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+      openWhatsApp(intPhone, encodeURIComponent(msg));
     }
 
     function exportCSV() {

@@ -160,6 +160,22 @@ function confirmAction(message, { confirmLabel = 'Confirmer', cancelLabel = 'Ann
   });
 }
 
+// ---- WhatsApp opener (works in in-app browsers) ----
+function openWhatsApp(phone, encodedMessage) {
+  const url = `https://wa.me/${phone}?text=${encodedMessage}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  try {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    if (isMobile) {
+      setTimeout(() => { if (!document.hidden) window.location.href = url; }, 400);
+    }
+  } catch (e) {
+    window.location.href = url;
+  }
+}
+
 // ---- Image upload helper ----
 async function uploadImageWithToast(file, folder = 'uploads') {
   const toast = showToast('Upload en cours…', 'loading', 0);

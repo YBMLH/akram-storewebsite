@@ -94,8 +94,7 @@ class WhatsAppOrder {
   sendOrder(orderInfo, cartItems, subtotal, shippingCost = 0) {
     const message = this.buildMessage(orderInfo, cartItems, subtotal, shippingCost);
     const encodedMessage = encodeURIComponent(message);
-    const url = `https://wa.me/${this.phoneNumber}?text=${encodedMessage}`;
-    window.open(url, '_blank');
+    openWhatsApp(this.phoneNumber, encodedMessage);
   }
 
   // Open WhatsApp for general contact
@@ -103,8 +102,34 @@ class WhatsAppOrder {
     const message = customMessage || (i18n.currentLang === 'ar'
       ? 'مرحباً، أريد الاستفسار عن منتجاتكم'
       : 'Bonjour, je souhaite me renseigner sur vos produits');
-    const url = `https://wa.me/${this.phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    openWhatsApp(this.phoneNumber, encodeURIComponent(message));
+  }
+}
+
+// Safe WhatsApp opener that works inside Instagram/Facebook/TikTok in-app browsers.
+// window.open('_blank') is silently blocked in these webviews, so we use an
+// anchor-click trick (which triggers the webview's universal-link handoff to
+// WhatsApp), with a location.href fallback.
+function openWhatsApp(phone, encodedMessage) {
+  const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  try {
+    const a = document.createElement('a');
+    a.href = waUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Fallback: if the anchor click didn't navigate within 400ms (webview blocked
+    // the new tab), send the current tab to wa.me — WhatsApp still opens from there.
+    if (isMobile) {
+      setTimeout(() => {
+        if (!document.hidden) window.location.href = waUrl;
+      }, 400);
+    }
+  } catch (e) {
+    window.location.href = waUrl;
   }
 }
 
