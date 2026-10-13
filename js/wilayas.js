@@ -1,5 +1,5 @@
 // ============================================================
-// Algeria — 58 Wilayas (provinces)
+// Algeria — 69 Wilayas (provinces)
 // Used in checkout form dropdown
 // ============================================================
 
@@ -62,4 +62,15 @@ const WILAYAS = [
   { code: '56', name: 'Djanet' },
   { code: '57', name: 'In Salah' },
   { code: '58', name: 'In Guezzam' },
+  { code: '59', name: 'Aflou' },
+  { code: '60', name: 'Barika' },
+  { code: '61', name: 'El Kantara' },
+  { code: '62', name: 'Bir El Ater' },
+  { code: '63', name: 'El Aricha' },
+  { code: '64', name: 'Ksar Chellala' },
+  { code: '65', name: 'Aïn Oussera' },
+  { code: '66', name: 'Messaad' },
+  { code: '67', name: 'Ksar El Boukhari' },
+  { code: '68', name: 'Bou Saâda' },
+  { code: '69', name: 'El Abiodh Sidi Cheikh' },
 ];
