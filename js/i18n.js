@@ -44,7 +44,13 @@ const TRANSLATIONS = {
   'cart.total': { ar: 'المجموع الكلي', fr: 'Total' },
   'cart.free_shipping': { ar: 'مجاني', fr: 'Gratuit' },
   'cart.remove': { ar: 'حذف', fr: 'Supprimer' },
-  'cart.place_order': { ar: 'اطلبي عبر واتساب', fr: 'Commander via WhatsApp' },
+  'cart.place_order': { ar: 'تأكيد عبر واتساب', fr: 'Confirmer sur WhatsApp' },
+  'cart.default_shipping': { ar: 'سعر التوصيل الافتراضي', fr: 'Tarif par défaut' },
+  'cart.select_wilaya_first': { ar: 'اختر الولاية لحساب التوصيل', fr: 'Choisissez la wilaya pour calculer la livraison' },
+  'cart.order_received': { ar: 'تم استلام طلبك !', fr: 'Commande reçue !' },
+  'cart.order_number': { ar: 'رقم الطلب', fr: 'Numéro de commande' },
+  'cart.order_received_msg': { ar: 'سنتواصل معك قريباً عبر واتساب لتأكيد الطلب.', fr: 'Nous vous contacterons sur WhatsApp pour confirmer votre commande.' },
+  'cart.back_home': { ar: 'العودة إلى الرئيسية', fr: 'Retour à l\'accueil' },
   'cart.items': { ar: 'منتج', fr: 'article(s)' },
 
   // Checkout form

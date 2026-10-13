@@ -37,6 +37,59 @@
   <script src="js/components.js"></script>
   <script src="js/inapp-helper.js" defer></script>
   <script>
+    let shippingConfig = { default: 0, free_threshold: 0, byWilaya: {} };
+
+    async function loadShippingConfig() {
+      try {
+        const cfg = await store.getSetting('shipping');
+        if (cfg) shippingConfig = Object.assign(shippingConfig, cfg);
+        if (!shippingConfig.byWilaya) shippingConfig.byWilaya = {};
+      } catch (e) { console.warn('Shipping config failed to load:', e); }
+    }
+
+    function getShippingCost(wilayaName) {
+      if (!wilayaName) return null; // unknown — show "select wilaya"
+      if (shippingConfig.free_threshold > 0 && cart.subtotal >= shippingConfig.free_threshold) return 0;
+      const w = shippingConfig.byWilaya && shippingConfig.byWilaya[wilayaName];
+      if (w != null) return w;
+      return shippingConfig.default || 0;
+    }
+
+    function updateTotals() {
+      const wilaya = document.getElementById('customer-wilaya')?.value || '';
+      const shipping = getShippingCost(wilaya);
+      const subtotalEl = document.getElementById('summary-subtotal');
+      const shippingEl = document.getElementById('summary-shipping');
+      const totalEl = document.getElementById('summary-total');
+      if (!subtotalEl) return;
+      subtotalEl.textContent = i18n.formatPrice(cart.subtotal);
+      if (shipping === null) {
+        shippingEl.textContent = i18n.t('cart.select_wilaya_first');
+        totalEl.textContent = i18n.formatPrice(cart.subtotal);
+      } else if (shipping === 0) {
+        shippingEl.textContent = i18n.t('cart.free_shipping');
+        totalEl.textContent = i18n.formatPrice(cart.subtotal);
+      } else {
+        shippingEl.textContent = i18n.formatPrice(shipping);
+        totalEl.textContent = i18n.formatPrice(cart.subtotal + shipping);
+      }
+    }
+
+    function renderOrderConfirmed(orderNumber) {
+      const c = document.getElementById('cart-content');
+      c.innerHTML = `
+        <div class="cart-empty" style="padding:60px 20px;">
+          <div style="width:72px;height:72px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h2 style="font-family:'Playfair Display',serif;font-size:2rem;margin:0 0 8px;">${i18n.t('cart.order_received')}</h2>
+          ${orderNumber ? `<p style="font-size:0.875rem;color:var(--color-text-muted);margin:0 0 4px;">${i18n.t('cart.order_number')}: <strong style="color:var(--color-text);">#${orderNumber}</strong></p>` : ''}
+          <p style="max-width:420px;margin:12px auto 24px;color:var(--color-text-secondary);line-height:1.6;">${i18n.t('cart.order_received_msg')}</p>
+          <a href="index.html" class="btn btn-primary">${i18n.t('cart.back_home')}</a>
+        </div>
+      `;
+    }
+
     function renderCart() {
       const container = document.getElementById('cart-content');
 
@@ -98,7 +151,7 @@
             </div>
             <div class="summary-row">
               <span data-i18n="cart.shipping">${i18n.t('cart.shipping')}</span>
-              <span data-i18n="cart.free_shipping">${i18n.t('cart.free_shipping')}</span>
+              <span id="summary-shipping" style="font-size:0.8125rem;">${i18n.t('cart.select_wilaya_first')}</span>
             </div>
             <div class="summary-row summary-total">
               <span data-i18n="cart.total">${i18n.t('cart.total')}</span>
@@ -119,7 +172,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label data-i18n="checkout.wilaya">${i18n.t('checkout.wilaya')}</label>
-                  <select id="customer-wilaya" required>
+                  <select id="customer-wilaya" required onchange="updateTotals()">
                     <option value="">--</option>
                     ${wilayaOptions}
                   </select>
@@ -150,6 +203,7 @@
       `;
 
       i18n.translatePage();
+      updateTotals();
     }
 
     function updateCartItem(index, qty) {
@@ -182,7 +236,17 @@
         return;
       }
 
-      // Save order to database
+      const shippingCost = Math.max(0, getShippingCost(orderInfo.wilaya) || 0);
+      const total = cart.subtotal + shippingCost;
+
+      // Disable button to prevent double submits
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '…';
+
+      // Save order to database first (so admin sees it even if customer never sends WA)
+      let savedOrder = null;
       try {
         const orderData = {
           customer_name: orderInfo.name,
@@ -192,8 +256,8 @@
           address: orderInfo.address,
           notes: orderInfo.notes,
           subtotal: cart.subtotal,
-          shipping_cost: 0,
-          total_amount: cart.subtotal,
+          shipping_cost: shippingCost,
+          total_amount: total,
           items: cart.items.map(item => ({
             product_id: item.product_id,
             variant_id: item.variant_id,
@@ -206,25 +270,28 @@
             image_url: item.image_url,
           })),
         };
-
-        await store.createOrder(orderData);
-      } catch (e) {
-        console.error('Failed to save order to database:', e);
-        // Continue with WhatsApp even if DB save fails
+        savedOrder = await store.createOrder(orderData);
+      } catch (err) {
+        console.error('Failed to save order to database:', err);
+        // Keep going — WhatsApp handoff is still the primary path
       }
 
-      // Send WhatsApp message
-      whatsapp.sendOrder(orderInfo, cart.items, cart.subtotal, 0);
+      // Send WhatsApp message (shipping included)
+      whatsapp.sendOrder(orderInfo, cart.items, cart.subtotal, shippingCost);
 
-      // Clear cart
+      // Clear cart and show confirmation screen
       cart.clear();
-      renderCart();
+      renderOrderConfirmed(savedOrder && savedOrder.order_number);
+
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
 
-    function renderPage() {
+    async function renderPage() {
       renderHeader('');
       renderFooter();
       renderWhatsAppFAB();
+      await loadShippingConfig();
       renderCart();
     }
 

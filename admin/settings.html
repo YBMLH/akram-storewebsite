@@ -94,6 +94,31 @@
 
         <div class="admin-card" style="margin-top:16px;">
           <div class="admin-card-header">
+            <h2>Frais de livraison par wilaya</h2>
+            <button type="button" class="btn btn-sm btn-outline" onclick="applyDefaultToEmpty()">Appliquer tarif par défaut aux vides</button>
+          </div>
+          <div class="admin-card-body">
+            <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--admin-border);">
+              <div class="form-group" style="margin:0;max-width:220px;">
+                <label>Tarif par défaut (DA)</label>
+                <input type="number" id="shipping_default" min="0" step="50" placeholder="500">
+              </div>
+              <div class="form-group" style="margin:0;max-width:220px;">
+                <label>Seuil livraison gratuite (DA)</label>
+                <input type="number" id="shipping_free_threshold" min="0" step="500" placeholder="0 = désactivé">
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="saveShipping()">Enregistrer tarifs</button>
+              <span id="ship-status" style="align-self:center;color:var(--color-success);font-size:0.8125rem;"></span>
+            </div>
+            <p style="color:var(--color-text-muted);font-size:0.8125rem;margin:0 0 12px;">
+              Laissez un champ vide pour utiliser le tarif par défaut. Mettez 0 pour livraison gratuite dans une wilaya précise.
+            </p>
+            <div id="shipping-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:10px;"></div>
+          </div>
+        </div>
+
+        <div class="admin-card" style="margin-top:16px;">
+          <div class="admin-card-header">
             <h2>Backend & Persistance</h2>
           </div>
           <div class="admin-card-body">
@@ -115,6 +140,7 @@
   <script src="../js/i18n.js"></script>
   <script src="../js/store.js"></script>
   <script src="../js/cart.js"></script>
+  <script src="../js/wilayas.js"></script>
   <script src="../js/admin/sidebar.js"></script>
   <script>
     async function loadPage() {
@@ -149,6 +175,68 @@
         badge.innerHTML = '<span class="status-badge status-draft">Mode Démo</span>';
       } else {
         badge.innerHTML = '<span class="status-badge status-active">Production (Supabase)</span>';
+      }
+
+      await loadShipping();
+    }
+
+    let shippingConfig = { default: 0, free_threshold: 0, byWilaya: {} };
+
+    async function loadShipping() {
+      const cfg = await store.getSetting('shipping');
+      if (cfg) shippingConfig = Object.assign(shippingConfig, cfg);
+      if (!shippingConfig.byWilaya) shippingConfig.byWilaya = {};
+
+      document.getElementById('shipping_default').value = shippingConfig.default || '';
+      document.getElementById('shipping_free_threshold').value = shippingConfig.free_threshold || '';
+
+      const grid = document.getElementById('shipping-grid');
+      grid.innerHTML = WILAYAS.map(w => {
+        const val = shippingConfig.byWilaya[w.name];
+        return `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--admin-bg);border-radius:6px;">
+            <span style="min-width:28px;font-size:0.75rem;color:var(--color-text-muted);font-variant-numeric:tabular-nums;">${w.code}</span>
+            <span style="flex:1;font-size:0.8125rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.name}</span>
+            <input type="number" min="0" step="50" placeholder="—" value="${val != null ? val : ''}"
+              data-wilaya="${w.name}"
+              style="width:90px;padding:4px 8px;border:1px solid var(--admin-border);border-radius:4px;font-size:0.8125rem;background:var(--admin-surface);color:var(--admin-text);text-align:end;">
+          </div>
+        `;
+      }).join('');
+    }
+
+    function applyDefaultToEmpty() {
+      const def = parseInt(document.getElementById('shipping_default').value, 10);
+      if (isNaN(def)) { showToast('Entrez d\'abord le tarif par défaut', 'error'); return; }
+      document.querySelectorAll('#shipping-grid input[data-wilaya]').forEach(el => {
+        if (el.value.trim() === '') el.value = def;
+      });
+    }
+
+    async function saveShipping() {
+      const status = document.getElementById('ship-status');
+      status.textContent = '';
+      status.style.color = 'var(--color-success)';
+
+      const def = parseInt(document.getElementById('shipping_default').value, 10) || 0;
+      const freeThreshold = parseInt(document.getElementById('shipping_free_threshold').value, 10) || 0;
+      const byWilaya = {};
+      document.querySelectorAll('#shipping-grid input[data-wilaya]').forEach(el => {
+        const w = el.dataset.wilaya;
+        const v = el.value.trim();
+        if (v !== '') byWilaya[w] = Math.max(0, parseInt(v, 10) || 0);
+      });
+
+      const payload = { default: def, free_threshold: freeThreshold, byWilaya };
+      try {
+        await store.setSetting('shipping', payload);
+        shippingConfig = payload;
+        status.textContent = '✓ Tarifs enregistrés';
+        setTimeout(() => { status.textContent = ''; }, 3000);
+      } catch (e) {
+        console.error(e);
+        status.style.color = 'var(--color-danger)';
+        status.textContent = 'Erreur: ' + (e.message || e);
       }
     }
 
