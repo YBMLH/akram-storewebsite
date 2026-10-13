@@ -337,7 +337,8 @@
       if (!container) return;
       container.innerHTML = productImages.map((url, i) => `
         <div class="image-preview">
-          <img src="${url}" onerror="this.style.opacity=0.2;">
+          ${url ? `<img src="${url}" alt="" onerror="this.outerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;background:#fee;color:#c00;font-size:0.6875rem;text-align:center;padding:6px;\\'>Image non chargée<br><a href=&quot;${url}&quot; target=_blank style=\\'color:#c00;text-decoration:underline;font-size:0.625rem;\\'>Ouvrir URL</a></div>';">`
+                : '<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fee;color:#c00;font-size:0.6875rem;text-align:center;padding:6px;">URL vide</div>'}
           ${i === 0
             ? '<span style="position:absolute;top:6px;left:6px;background:var(--admin-primary);color:#fff;font-size:0.625rem;padding:3px 7px;border-radius:var(--admin-radius-xs);font-weight:600;letter-spacing:0.5px;">PRINCIPAL</span>'
             : `<button type="button" onclick="makeImagePrimary(${i})" title="Définir comme image principale" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:0.625rem;padding:3px 7px;border-radius:var(--admin-radius-xs);border:none;cursor:pointer;backdrop-filter:blur(4px);">★</button>`
@@ -385,9 +386,10 @@
 
     function addCustomSize() {
       const input = document.getElementById('custom-size-input');
-      const val = input.value.trim();
-      if (!val) return;
-      selectedSizes.add(val);
+      const raw = input.value.trim();
+      if (!raw) return;
+      // Allow comma-separated list in one go: "42, 44, 46" -> three chips
+      raw.split(/[,;]+/).map(s => s.trim()).filter(Boolean).forEach(s => selectedSizes.add(s));
       input.value = '';
       renderSizeChecks();
       renderCombos();
