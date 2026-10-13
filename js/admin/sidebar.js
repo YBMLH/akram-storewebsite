@@ -270,13 +270,34 @@ async function checkAdminAuth() {
       window.location.href = '/admin/login.html';
       return false;
     }
+    // Proactive refresh if the token expires within 5 minutes
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at - now < 300) {
+      try {
+        await store.supabase?.auth.refreshSession();
+      } catch (e) {
+        console.warn('[admin] token refresh failed, redirecting to login:', e);
+        window.location.href = '/admin/login.html';
+        return false;
+      }
+    }
     return true;
   } catch (e) {
     console.error('[admin] auth check failed:', e);
-    // Don't redirect on transient errors — let the page render and surface the error
     return true;
   }
 }
+
+// Catch 'exp claim timestamp check failed' / 401 Supabase errors globally
+// and bounce the user to login instead of leaving them stuck on a dead page.
+window.addEventListener('unhandledrejection', (ev) => {
+  const msg = String(ev.reason?.message || ev.reason || '');
+  if (/exp.*claim|JWT.*expired|invalid.*token/i.test(msg)) {
+    console.warn('[admin] JWT expired, redirecting to login');
+    try { showToast('Session expirée, reconnexion…', 'error', 2500); } catch (e) {}
+    setTimeout(() => { window.location.href = '/admin/login.html'; }, 1000);
+  }
+});
 
 async function adminLogout() {
   if (STORE_CONFIG.demoMode) {

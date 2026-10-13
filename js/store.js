@@ -14,8 +14,25 @@ class DataStore {
       if (typeof supabase !== 'undefined' && supabase.createClient) {
         this.supabase = supabase.createClient(
           STORE_CONFIG.supabase.url,
-          STORE_CONFIG.supabase.anonKey
+          STORE_CONFIG.supabase.anonKey,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: false,
+              storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
+            },
+          }
         );
+        // Also re-check session on tab focus so a long-idle tab doesn't fire
+        // requests with a stale JWT right after waking up.
+        if (typeof document !== 'undefined') {
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+              try { this.supabase.auth.getSession(); } catch (e) {}
+            }
+          });
+        }
       } else {
         console.warn('Supabase client not loaded, falling back to demo mode');
         this.isDemo = true;
